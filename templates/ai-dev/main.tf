@@ -44,30 +44,7 @@ resource "coder_agent" "main" {
 
     # Create oh-my-claudecode setup script
     cat <<'EOF' > /home/coder/install-oh-my-claudecode.sh
-#!/bin/bash
-echo "Starting oh-my-claudecode installation..."
-echo "NOTE: You must be logged in to Claude CLI first."
-echo "If you haven't logged in, press Ctrl+C, run 'claude login', and try again."
-echo "Starting in 5 seconds..."
-sleep 5
-
-expect <<'EXP'
-  set timeout 120
-  spawn claude
-  
-  # Wait for prompt (assuming it ends with > or similar)
-  expect -re ".*>"
-  send "/plugin marketplace add https://github.com/Yeachan-Heo/oh-my-claudecode\r"
-  
-  expect -re ".*>"
-  send "/plugin install oh-my-claudecode\r"
-  
-  expect -re ".*>"
-  send "/oh-my-claudecode:omc-setup\r"
-
-  expect -re ".*>"
-  send "/exit\r"
-EXP
+${file("${path.module}/scripts/install-oh-my-claudecode.sh")}
 EOF
     chmod +x /home/coder/install-oh-my-claudecode.sh
     chown coder:coder /home/coder/install-oh-my-claudecode.sh
