@@ -28,6 +28,6 @@ echo "Packaging $TEMPLATE_NAME..."
 # -r: recursive
 # -q: quiet
 # -x: exclude patterns (terraform state, hidden files)
-(cd "$TEMPLATE_DIR" && zip -r -q "$OUTPUT_DIR_ABS/$TEMPLATE_NAME.zip" . -x "*.terraform*" "*.git*" "*.tfstate*")
+(cd "$TEMPLATE_DIR" && zip -r -q "$OUTPUT_DIR_ABS/$TEMPLATE_NAME.zip" . -x ".terraform/*" "*.git*" "*.tfstate*")
 
 echo "Created $OUTPUT_DIR/$TEMPLATE_NAME.zip"
