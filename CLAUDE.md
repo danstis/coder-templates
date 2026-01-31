@@ -159,6 +159,56 @@ The agent includes three metadata collectors that report to the Coder dashboard:
 
 All run every 10 seconds with 1-second timeout.
 
+## Documentation Maintenance
+
+### Keep README.md Up to Date
+
+**CRITICAL**: Whenever you make changes to the repository, you MUST update README.md if the changes affect:
+
+1. **Available templates** - Adding/removing/renaming templates
+2. **Template features** - New development stacks, AI agents, or capabilities
+3. **Development workflow** - Changes to build, test, or deployment processes
+4. **Release process** - Modifications to GitHub Actions, versioning, or packaging
+5. **Project structure** - New directories, moved files, or organizational changes
+6. **Prerequisites** - New tools or version requirements
+7. **Configuration** - New settings or parameters
+
+### Update Checklist
+
+Before completing any task that modifies the repository, verify:
+
+- [ ] Does this change affect how users interact with templates?
+- [ ] Did I add/modify/remove any template parameters?
+- [ ] Did I change the development workflow or commands?
+- [ ] Did I add new scripts or automation?
+- [ ] Did I modify the release or packaging process?
+- [ ] Did I add new dependencies or requirements?
+
+If ANY checkbox is YES, update the corresponding section in README.md.
+
+### Common Update Scenarios
+
+| Change Made | README Section to Update |
+|-------------|--------------------------|
+| Added new template | "Available Templates" + "Project Structure" |
+| Added development stack option | "Available Templates" → template features |
+| Modified packaging script | "Release Process" → "How It Works" |
+| Added new workflow step | "Development" → "Template Development Workflow" |
+| Changed versioning strategy | "Release Process" → "Versioning Strategy" |
+| Updated prerequisites | "Development" → "Prerequisites" |
+| Modified conventional commit rules | "Release Process" → "Commit Message Format" |
+
+### Documentation Standards
+
+When updating README.md:
+- Keep it accurate and synchronized with actual code
+- Use concrete examples from the codebase
+- Update version numbers and command outputs if they changed
+- Verify all links and file paths are correct
+- Test all code snippets and commands
+- Maintain consistent formatting and style
+- Keep the table of contents aligned with sections
+
 ## Commit and PR Guidelines
 
 ### Conventional Commits Required
