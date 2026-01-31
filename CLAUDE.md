@@ -158,3 +158,75 @@ The agent includes three metadata collectors that report to the Coder dashboard:
 - Disk usage (`coder stat disk --path /home/coder`)
 
 All run every 10 seconds with 1-second timeout.
+
+## Commit and PR Guidelines
+
+### Conventional Commits Required
+
+This repository uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and releases. Both commit messages and PR titles MUST follow this format:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Commit Types and Version Bumping
+
+| Type | Version Bump | When to Use |
+|------|--------------|-------------|
+| `fix:` | Patch (0.0.x) | Bug fixes |
+| `feat:` | Minor (0.x.0) | New features |
+| `feat!:` or `BREAKING CHANGE:` | Major (x.0.0) | Breaking changes |
+| `docs:` | None | Documentation only |
+| `chore:` | None | Maintenance tasks |
+| `style:` | None | Code style changes |
+| `refactor:` | None | Code refactoring |
+| `test:` | None | Test additions/changes |
+| `ci:` | None | CI/CD changes |
+
+### Examples
+
+```bash
+# Patch release - bug fix
+fix(ai-dev): resolve code-server startup timing issue
+
+# Minor release - new feature
+feat(ai-dev): add Rust development stack option
+
+# Major release - breaking change
+feat!: redesign template parameter structure
+
+BREAKING CHANGE: templates now require Coder v2.5 or higher
+
+# No release - documentation
+docs: update ai-dev README with troubleshooting steps
+```
+
+### Pull Request Titles
+
+**IMPORTANT**: PR titles must also follow conventional commit format because when PRs are squash-merged, the PR title becomes the commit message that triggers versioning.
+
+Good PR titles:
+- `feat(ai-dev): add support for Java development stack`
+- `fix: correct Docker volume permissions issue`
+- `docs: improve README installation instructions`
+
+Bad PR titles:
+- `Add Java support` (missing type and scope)
+- `Fix bug` (too vague)
+- `Update docs` (missing conventional format)
+
+### Workflow
+
+1. Create feature branch from `main`
+2. Make changes with descriptive conventional commits
+3. Create PR with conventional commit title
+4. PR is reviewed and squash-merged to `main`
+5. GitHub Actions automatically:
+   - Determines version bump from PR title (now the commit message)
+   - Creates git tag
+   - Packages templates
+   - Creates GitHub release with artifacts
