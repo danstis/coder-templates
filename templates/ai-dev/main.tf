@@ -37,7 +37,17 @@ resource "coder_agent" "main" {
 
     # Install essential packages
     sudo apt-get update
-    sudo apt-get install -y curl wget git
+    sudo apt-get install -y curl wget git nodejs npm expect
+
+    # Install Claude Code
+    sudo npm install -g @anthropic-ai/claude-code
+
+    # Create oh-my-claudecode setup script
+    cat <<'EOF' > /home/coder/install-oh-my-claudecode.sh
+${file("${path.module}/scripts/install-oh-my-claudecode.sh")}
+EOF
+    chmod +x /home/coder/install-oh-my-claudecode.sh
+    chown coder:coder /home/coder/install-oh-my-claudecode.sh
 
     # Install code-server
     if ! command -v code-server &>/dev/null; then
