@@ -17,8 +17,4 @@ expect <<'EXP'
   send "/plugin install oh-my-claudecode\r"
   
   expect -re ".* >"
-  send "/oh-my-claudecode:omc-setup\r"
-
-  expect -re ".* >"
-  send "/exit\r"
 EXP
