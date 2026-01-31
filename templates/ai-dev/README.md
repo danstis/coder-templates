@@ -13,8 +13,11 @@ This template provides a complete development environment running in a Docker co
 ## Features
 
 - **Web-based IDE**: Access VS Code through your browser via code-server
+- **Local VS Code Support**: Connect your local VS Code to the workspace via Coder CLI and Remote-SSH
 - **Persistent Storage**: Your home directory (`/home/coder`) persists across workspace rebuilds
 - **Essential Tools**: Pre-installed curl, wget, and git
+- **Git Pre-configuration**: Git author and committer information automatically set from your Coder profile
+- **System Metrics**: Real-time CPU, RAM, and disk usage monitoring in the Coder dashboard
 - **No Authentication**: code-server runs with `--auth none` for seamless access
 - **Host Network Mode**: Direct network access for easy service development
 
@@ -36,7 +39,43 @@ This template provides a complete development environment running in a Docker co
 
 ### Accessing the IDE
 
+#### Browser-based (code-server)
+
 Once your workspace is running, click on the "VS Code Web" app in the Coder dashboard. This will open code-server in a new browser tab with your workspace ready to use.
+
+#### Local VS Code Connection
+
+You can connect your local VS Code installation to your workspace for a native development experience:
+
+1. **Install Coder CLI**:
+   ```bash
+   # macOS/Linux
+   curl -fsSL https://coder.com/install.sh | sh
+
+   # Windows (PowerShell)
+   irm https://coder.com/install.ps1 | iex
+   ```
+
+2. **Login to Coder**:
+   ```bash
+   coder login https://your-coder-url.com
+   ```
+
+3. **Configure SSH**:
+   ```bash
+   coder config-ssh
+   ```
+   This adds your Coder workspaces to your SSH config (`~/.ssh/config`).
+
+4. **Install Remote-SSH Extension**:
+   - Open VS Code
+   - Install the "Remote - SSH" extension (ms-vscode-remote.remote-ssh)
+
+5. **Connect to Workspace**:
+   - Press `F1` or `Ctrl+Shift+P` (Windows/Linux) / `Cmd+Shift+P` (macOS)
+   - Type "Remote-SSH: Connect to Host"
+   - Select your workspace from the list (format: `coder.<workspace-name>`)
+   - VS Code will open a new window connected to your workspace
 
 ### Workspace Directory
 
@@ -120,6 +159,33 @@ Check Docker logs:
 ```bash
 docker logs coder-<username>-<workspace-name>
 ```
+
+### Local VS Code Connection Issues
+
+#### Agent not connecting
+
+Verify the Coder agent is running:
+```bash
+coder list
+```
+
+Your workspace should show as "Running". If not, start it from the Coder dashboard.
+
+#### SSH connection fails
+
+Check the agent logs in the Coder dashboard (Workspace → Logs) for connection errors. Common issues:
+- Firewall blocking SSH connections
+- Coder CLI not logged in (`coder login` again)
+- SSH config not updated (run `coder config-ssh` again)
+
+#### Workspace not appearing in Remote-SSH
+
+Ensure `coder config-ssh` completed successfully. Check your SSH config:
+```bash
+cat ~/.ssh/config | grep coder
+```
+
+You should see entries for your Coder workspaces. If missing, run `coder config-ssh` again.
 
 ## Contributing
 

@@ -25,6 +25,9 @@ resource "coder_agent" "main" {
     #!/bin/bash
     set -e
 
+    # Install sudo first (needed for subsequent commands)
+    apt-get update && apt-get install -y sudo
+
     # Create coder user if it doesn't exist
     if ! id -u coder &>/dev/null; then
       sudo useradd -m -s /bin/bash coder
@@ -44,6 +47,37 @@ resource "coder_agent" "main" {
     # Start code-server as coder user
     sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder &
   EOT
+
+  env = {
+    GIT_AUTHOR_NAME     = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+    GIT_AUTHOR_EMAIL    = data.coder_workspace_owner.me.email
+    GIT_COMMITTER_NAME  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+    GIT_COMMITTER_EMAIL = data.coder_workspace_owner.me.email
+  }
+
+  metadata {
+    display_name = "CPU Usage"
+    key          = "cpu_usage"
+    script       = "coder stat cpu"
+    interval     = 10
+    timeout      = 1
+  }
+
+  metadata {
+    display_name = "RAM Usage"
+    key          = "ram_usage"
+    script       = "coder stat mem"
+    interval     = 10
+    timeout      = 1
+  }
+
+  metadata {
+    display_name = "Disk Usage"
+    key          = "disk_usage"
+    script       = "coder stat disk --path /home/coder"
+    interval     = 10
+    timeout      = 1
+  }
 }
 
 resource "docker_container" "workspace" {
@@ -53,16 +87,8 @@ resource "docker_container" "workspace" {
 
   hostname = data.coder_workspace.me.name
 
-  # Run container in privileged mode for better compatibility
-  command = [
-    "sh", "-c",
-    <<-EOT
-      # Start SSH service for agent connection
-      apt-get update && apt-get install -y sudo
-      ${coder_agent.main.init_script}
-      sleep infinity
-    EOT
-  ]
+  # Run Coder agent directly
+  command = ["sh", "-c", coder_agent.main.init_script]
 
   env = [
     "CODER_AGENT_TOKEN=${coder_agent.main.token}",
