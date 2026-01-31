@@ -24,15 +24,51 @@ A Docker-based development workspace optimized for AI-assisted development workf
 
 See [templates/ai-dev/README.md](templates/ai-dev/README.md) for detailed documentation.
 
-## Using Templates
+## Deployment
 
-### From GitHub Releases
+### Automated Deployment (CI/CD)
 
-1. Download the template zip file from the [latest release](https://github.com/danstis/coder-templates/releases/latest)
-2. Upload to your Coder deployment:
+Templates can be automatically deployed to your Coder instance when new releases are created.
+
+**Setup:**
+
+1. Create a Coder API token:
    ```bash
-   coder templates push <template-name> --directory /path/to/extracted/template
+   coder tokens create --name github-actions --lifetime 8760h
    ```
+
+2. Add repository secrets in GitHub:
+   - `CODER_URL` - Your Coder instance URL (e.g., `https://coder.example.com`)
+   - `CODER_SESSION_TOKEN` - The API token created above
+
+3. Add a repository variable:
+   - `CODER_DEPLOY_ENABLED` = `true` (enables automatic deployment)
+
+4. Templates will now auto-deploy when releases are published.
+
+**Manual trigger**: You can also trigger deployment manually via Actions → "Deploy Templates to Coder" → Run workflow.
+
+### Manual Deployment
+
+Use the deployment script to deploy templates from GitHub releases:
+
+```bash
+# Set required environment variables
+export CODER_URL=https://your-coder-instance.com
+export CODER_SESSION_TOKEN=your-token
+
+# Deploy latest release (all templates)
+./scripts/deploy-templates.sh
+
+# Deploy a specific release
+./scripts/deploy-templates.sh --release v1.2.0
+
+# Deploy only a specific template
+./scripts/deploy-templates.sh --template ai-dev
+
+# Dry run to see what would be deployed
+./scripts/deploy-templates.sh --dry-run
+```
 
 ### From Source
 
@@ -173,14 +209,29 @@ No manual intervention is required.
 coder-templates/
 ├── .github/
 │   └── workflows/
+│       ├── deploy-templates.yml   # Coder deployment workflow
 │       └── package-templates.yml  # Automated release workflow
 ├── scripts/
+│   ├── deploy-templates.sh        # Manual deployment script
 │   └── package-template.sh        # Template packaging script
 ├── templates/
 │   └── ai-dev/
 │       ├── main.tf                # Terraform configuration
 │       ├── README.md              # Template documentation
-│       └── scripts/               # Template-specific scripts
+│       ├── scripts/
+│       │   ├── common-deps.sh     # Shared dependency installation
+│       │   ├── install-oh-my-claudecode.sh
+│       │   ├── stacks/            # Development stack installers
+│       │   │   ├── python-uv.sh
+│       │   │   ├── python-pip.sh
+│       │   │   ├── go.sh
+│       │   │   └── node.sh
+│       │   └── agents/            # AI agent installers
+│       │       ├── claude.sh
+│       │       ├── opencode.sh
+│       │       ├── oh-my-claudecode.sh
+│       │       ├── oh-my-opencode.sh
+│       │       └── relentless.sh
 ├── CLAUDE.md                      # AI assistant guidance
 └── README.md                      # This file
 ```
