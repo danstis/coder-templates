@@ -15,7 +15,8 @@ This template provides a complete development environment running in a Docker co
 - **Web-based IDE**: Access VS Code through your browser via code-server
 - **Local VS Code Support**: Connect your local VS Code to the workspace via Coder CLI and Remote-SSH
 - **Persistent Storage**: Your home directory (`/home/coder`) persists across workspace rebuilds
-- **Essential Tools**: Pre-installed curl, wget, and git
+- **Essential Tools**: Pre-installed curl, wget, git, Node.js, and npm
+- **AI Tools**: Pre-installed Claude Code CLI and oh-my-claudecode setup script
 - **Git Pre-configuration**: Git author and committer information automatically set from your Coder profile
 - **System Metrics**: Real-time CPU, RAM, and disk usage monitoring in the Coder dashboard
 - **No Authentication**: code-server runs with `--auth none` for seamless access
@@ -80,6 +81,21 @@ You can connect your local VS Code installation to your workspace for a native d
 ### Workspace Directory
 
 Your persistent home directory is mounted at `/home/coder`. All files and configurations stored here will persist across workspace restarts and rebuilds.
+
+### Using Claude Code and oh-my-claudecode
+
+This template comes with [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) installed. To set up the [oh-my-claudecode](https://yeachan-heo.github.io/oh-my-claudecode-website/) plugin:
+
+1.  Open a terminal in your workspace.
+2.  Login to Claude:
+    ```bash
+    claude login
+    ```
+3.  Run the installation script:
+    ```bash
+    ./install-oh-my-claudecode.sh
+    ```
+    This script automates the plugin installation commands.
 
 ## Customization
 
