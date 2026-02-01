@@ -195,9 +195,11 @@ $env:CODER_SESSION_TOKEN = "your-token"
 
 ## Release Process
 
-Releases are **fully automated** via GitHub Actions. The workflow is triggered on every push to the `main` branch.
+Releases are **fully automated** via GitHub Actions. The workflow is triggered on every push to the `main` branch and on pull requests.
 
 ### How It Works
+
+**Production Releases (push to main):**
 
 1. **Packaging**: All templates in `templates/` are automatically packaged into zip files using `scripts/package-template.sh`
 
@@ -208,6 +210,21 @@ Releases are **fully automated** via GitHub Actions. The workflow is triggered o
 4. **Release Creation**: A GitHub release is created with:
    - Release notes generated from commit messages
    - All packaged template zip files as downloadable assets
+
+**Pre-releases (pull requests):**
+
+1. **Packaging**: Templates are packaged the same way as production releases
+
+2. **Pre-release Versioning**: A semver pre-release tag is created using the format:
+   ```
+   v{major}.{minor}.{patch+1}-pr.{pr_number}.{run_number}
+   ```
+   For example, if the latest release is `v1.2.3` and PR #42 triggers run #15, the pre-release will be `v1.2.4-pr.42.15`
+
+3. **Pre-release Creation**: A GitHub pre-release is created with:
+   - Pre-release flag enabled (not shown as "latest")
+   - PR title and description in release notes
+   - All packaged template zip files for testing
 
 ### Commit Message Format
 
