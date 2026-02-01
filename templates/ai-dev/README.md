@@ -132,6 +132,50 @@ This template comes with [Claude Code](https://docs.anthropic.com/claude/docs/cl
     ```
     This script automates the plugin installation commands.
 
+### Using Agent OS
+
+If you selected the **Agent OS** plugin during workspace creation, [Agent OS](https://buildermethods.com/agent-os) is installed at `/home/coder/agent-os`.
+
+Agent OS provides a lightweight standards system that helps keep AI agents aligned with your project's conventions, patterns, and architectural decisions.
+
+#### Verification
+
+Confirm Agent OS is installed:
+
+```bash
+ls /home/coder/agent-os
+```
+
+You should see the Agent OS directory containing `commands/`, `profiles/`, `scripts/`, and `config.yml`.
+
+#### Quick Start
+
+1. Navigate to your project directory:
+   ```bash
+   cd /home/coder/my-project
+   ```
+
+2. Install Agent OS into your project:
+   ```bash
+   /home/coder/agent-os/scripts/project-install.sh
+   ```
+   This creates an `agent-os/` directory in your project with standards and Claude Code slash commands.
+
+3. Use the slash commands in Claude Code:
+   - `/discover-standards` - Extract patterns from your codebase
+   - `/inject-standards` - Deploy standards into your context
+   - `/shape-spec` - Create better specs for AI-assisted builds
+
+#### Customization
+
+Agent OS uses profiles to organize standards. The default profile is installed at `/home/coder/agent-os/profiles/default/`. You can:
+
+- Edit standards in `profiles/default/global/` to match your conventions
+- Create new profiles for different project types
+- Configure profile inheritance in `config.yml`
+
+See the [Agent OS documentation](https://buildermethods.com/agent-os) for more details.
+
 ## Template Architecture
 
 ### Scripts Directory Structure
@@ -148,11 +192,9 @@ scripts/
 │   ├── go.sh               # Go language
 │   └── node.sh             # Node.js 24.x
 └── agents/                 # AI agent installers
-    ├── claude.sh           # Claude Code
-    ├── opencode.sh         # OpenCode
     ├── oh-my-claudecode.sh # Oh-My-ClaudeCode
     ├── oh-my-opencode.sh   # Oh-My-OpenCode
-    └── relentless.sh       # Relentless
+    └── agent-os.sh         # Agent OS
 ```
 
 ### How Scripts Are Used
@@ -161,7 +203,7 @@ The `main.tf` file uses Terraform's `file()` function to load these scripts dyna
 
 1. **common-deps.sh** is always executed first to install shared dependencies
 2. **Stack scripts** are selected based on the `stack` parameter (python-uv, python-pip, go, node, or none)
-3. **Agent scripts** are selected based on the `ai_agent` parameter (claude, opencode, oh-my-claudecode, oh-my-opencode, relentless, or none)
+3. **Agent scripts** are selected based on the `ai_plugin` parameter (oh-my-claudecode, oh-my-opencode, agent-os, or none)
 
 This modular approach allows:
 - Easy addition of new stacks or agents by creating new scripts
@@ -209,8 +251,8 @@ This modular approach allows:
    sudo npm install -g your-agent-package
    ```
 
-2. Add to the `data "coder_parameter" "ai_agent"` options in `main.tf`
-3. Add to the `ai_agent_install` lookup in the locals block
+2. Add to the `data "coder_parameter" "ai_plugin"` options in `main.tf`
+3. Add to the `ai_plugin_install` lookup in the locals block
 
 ### Changing the Base Image
 

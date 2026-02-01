@@ -67,6 +67,11 @@ data "coder_parameter" "ai_plugin" {
     value = "oh-my-opencode"
     icon  = "/icon/opencode.svg"
   }
+  option {
+    name  = "Agent OS"
+    value = "agent-os"
+    icon  = "/icon/terminal.svg"
+  }
 }
 
 locals {
@@ -82,6 +87,7 @@ locals {
   ai_plugin_install = lookup({
     "oh-my-claudecode" = file("${path.module}/scripts/agents/oh-my-claudecode.sh")
     "oh-my-opencode"   = file("${path.module}/scripts/agents/oh-my-opencode.sh")
+    "agent-os"         = file("${path.module}/scripts/agents/agent-os.sh")
     "none"             = "echo 'No AI plugin selected'"
   }, data.coder_parameter.ai_plugin.value, "echo 'Unknown AI plugin'")
 

@@ -46,7 +46,8 @@ scripts/
 │   └── go.sh
 └── agents/                 # AI plugin installers (optional enhancements)
     ├── oh-my-claudecode.sh
-    └── oh-my-opencode.sh
+    ├── oh-my-opencode.sh
+    └── agent-os.sh
 ```
 
 **Terraform Implementation:**
@@ -154,6 +155,7 @@ All 6 base AI CLI tools are automatically installed in every workspace:
 Plugins enhance the base tools with additional features:
 - **oh-my-claudecode**: Enhances Claude Code with additional configuration
 - **oh-my-opencode**: Enhances OpenCode with additional features
+- **agent-os**: Installs [Agent OS](https://buildermethods.com/agent-os) standards system for keeping AI agents aligned with project conventions
 - **none**: No plugin (default)
 
 ## Extending the Template
