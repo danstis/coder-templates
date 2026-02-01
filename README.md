@@ -98,6 +98,9 @@ export CODER_SESSION_TOKEN=your-token
 # Deploy a specific release
 ./scripts/deploy-templates.sh --release v1.2.0
 
+# Deploy latest pre-release (from PR builds)
+./scripts/deploy-templates.sh --prerelease
+
 # Deploy only a specific template
 ./scripts/deploy-templates.sh --template ai-dev
 
@@ -118,6 +121,9 @@ $env:CODER_SESSION_TOKEN = "your-token"
 
 # Deploy a specific release
 .\scripts\deploy-templates.ps1 -Release "v1.2.0"
+
+# Deploy latest pre-release (from PR builds)
+.\scripts\deploy-templates.ps1 -Prerelease
 
 # Deploy only a specific template
 .\scripts\deploy-templates.ps1 -Template "ai-dev"
