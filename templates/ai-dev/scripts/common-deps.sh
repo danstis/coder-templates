@@ -13,5 +13,16 @@ if ! id -u coder &>/dev/null; then
   echo "coder ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/coder
 fi
 
-# Install essential packages
-apt-get install -y curl wget git nodejs npm expect
+# Install essential packages (nodejs/npm excluded - installed via nodesource below)
+apt-get install -y curl wget git expect
+
+# GitHub CLI
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y gh
+
+# Node.js 24.x (provides nodejs and npm)
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt-get install -y nodejs

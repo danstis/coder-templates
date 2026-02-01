@@ -37,19 +37,16 @@ The template uses modular installation scripts loaded via Terraform's `file()` f
 **Scripts Directory:**
 ```
 scripts/
-├── common-deps.sh          # Shared dependencies (always executed)
+├── common-deps.sh          # Shared dependencies (Node 24, gh CLI, always executed)
+├── base-ai-tools.sh        # All 6 base AI CLI tools (parallel installation)
 ├── install-oh-my-claudecode.sh
 ├── stacks/                 # Development stack installers
 │   ├── python-uv.sh
 │   ├── python-pip.sh
-│   ├── go.sh
-│   └── node.sh
-└── agents/                 # AI agent installers
-    ├── claude.sh
-    ├── opencode.sh
+│   └── go.sh
+└── agents/                 # AI plugin installers (optional enhancements)
     ├── oh-my-claudecode.sh
-    ├── oh-my-opencode.sh
-    └── relentless.sh
+    └── oh-my-opencode.sh
 ```
 
 **Terraform Implementation:**
@@ -105,12 +102,13 @@ coder templates push ai-dev -d templates/ai-dev
 
 The `coder_agent.startup_script` executes in the container on startup. Critical ordering:
 
-1. **Run common-deps.sh** - Installs sudo, creates coder user, installs shared dependencies (curl, wget, git, nodejs, npm, expect)
-2. **Run stack script** - Installs selected development stack based on parameter
-3. **Run agent script** - Installs selected AI agent based on parameter
-4. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
-5. **Install code-server** - If not already present
-6. **Start code-server** - In background on port 13337
+1. **Run common-deps.sh** - Installs sudo, creates coder user, installs shared dependencies (curl, wget, git, expect, Node.js 24, gh CLI)
+2. **Run base-ai-tools.sh** - Installs all 6 AI CLI tools in parallel (claude, opencode, relentless, codex, copilot, gemini)
+3. **Run stack script** - Installs selected development stack based on parameter
+4. **Run plugin script** - Installs selected AI plugin based on parameter (oh-my-claudecode/oh-my-opencode)
+5. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
+6. **Install code-server** - If not already present
+7. **Start code-server** - In background on port 13337
 
 Each installation step is wrapped in a subshell with `|| echo` for non-fatal error handling, allowing the container to start even if optional installations fail.
 
@@ -139,18 +137,24 @@ Container and volume names follow the pattern: `coder-{owner}-{workspace}` for c
 - **python-uv**: Python with uv package manager (default)
 - **python-pip**: Python with pip
 - **go**: Go language
-- **node**: Node.js 24.x
 - **none**: No stack installed
 
-### AI Agents
-- **claude**: Claude Code (@anthropic-ai/claude-code)
-- **opencode**: OpenCode (opencode-ai)
-- **oh-my-opencode**: Oh-My-OpenCode
-- **oh-my-claudecode**: Oh-My-ClaudeCode (default)
-- **relentless**: Relentless (@arvorco/relentless)
-- **none**: No AI agent
+Note: Node.js 24 is now always available in the base image via common-deps.sh.
 
-All AI agents require Node.js and are installed globally via npm.
+### Base AI Tools (Always Installed)
+All 6 base AI CLI tools are automatically installed in every workspace:
+- **Claude Code** (@anthropic-ai/claude-code) - Anthropic's AI coding assistant
+- **OpenCode** (opencode-ai) - Open-source AI coding assistant
+- **Relentless** (@arvorco/relentless) - Uses Claude Code for persistent coding
+- **Codex** (@openai/codex) - OpenAI's coding assistant
+- **Copilot** (@github/copilot) - GitHub's AI pair programmer
+- **Gemini** (@google/gemini-cli) - Google's AI coding assistant
+
+### AI Plugins (Optional)
+Plugins enhance the base tools with additional features:
+- **oh-my-claudecode**: Enhances Claude Code with additional configuration
+- **oh-my-opencode**: Enhances OpenCode with additional features
+- **none**: No plugin (default)
 
 ## Extending the Template
 
@@ -184,21 +188,30 @@ To add a new development stack option:
 
 ### Adding a New AI Agent
 
-To add a new AI agent option:
+To add a new base AI tool (installed in all workspaces):
 
-1. **Create the installation script** at `scripts/agents/your-agent.sh`:
+1. **Update base-ai-tools.sh** at `scripts/base-ai-tools.sh`:
+   - Add the npm install command with background execution (`&`)
+   - Add the wait command with success/failure messaging
+   - Follow the existing parallel installation pattern
+
+2. **Add a coder_app resource** in `main.tf` following the existing pattern
+
+To add a new AI plugin option (optional enhancement):
+
+1. **Create the installation script** at `scripts/agents/your-plugin.sh`:
    ```bash
    #!/bin/bash
-   # your-agent.sh - Install Your Agent
-   # Requires: Node.js and npm (from common-deps.sh)
+   # your-plugin.sh - Install Your Plugin
+   # Requires: Base tool (from base-ai-tools.sh), Node.js and npm (from common-deps.sh)
    set -e
 
-   sudo npm install -g your-agent-package
+   sudo npm install -g your-plugin-package
    ```
 
-2. **Add parameter option** in `main.tf` under `data "coder_parameter" "ai_agent"`
+2. **Add parameter option** in `main.tf` under `data "coder_parameter" "ai_plugin"`
 
-3. **Add to lookup** in the locals block under `ai_agent_install`
+3. **Add to lookup** in the locals block under `ai_plugin_install`
 
 ### Script Writing Guidelines
 
