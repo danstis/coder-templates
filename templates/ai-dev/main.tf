@@ -139,7 +139,7 @@ EOF
     fi
 
     # Start code-server as coder user
-    sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder &
+    sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
   EOT
 
   env = {
