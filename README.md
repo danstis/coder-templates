@@ -36,20 +36,25 @@ Use the deployment scripts to deploy templates from GitHub releases to your Code
 
 ### Prerequisites
 
-1. Install the [Coder CLI](https://coder.com/docs/install/cli)
-2. Create an API token:
+1. Install the [Coder CLI](https://coder.com/docs/install/cli) and authenticate:
    ```bash
-   coder tokens create --name deploy-script --lifetime 8760h
+   coder login https://your-coder-instance.com
+   ```
+
+2. Install the [GitHub CLI](https://cli.github.com/) and authenticate:
+   ```bash
+   gh auth login
    ```
 
 ### Linux/macOS (Bash)
 
 ```bash
-# Set required environment variables
+# Deploy latest release (using pre-authenticated CLI)
+./scripts/deploy-templates.sh
+
+# Or with explicit credentials
 export CODER_URL=https://your-coder-instance.com
 export CODER_SESSION_TOKEN=your-token
-
-# Deploy latest release (all templates)
 ./scripts/deploy-templates.sh
 
 # Deploy a specific release
@@ -65,11 +70,12 @@ export CODER_SESSION_TOKEN=your-token
 ### Windows (PowerShell)
 
 ```powershell
-# Set required environment variables
+# Deploy latest release (using pre-authenticated CLI)
+.\scripts\deploy-templates.ps1
+
+# Or with explicit credentials
 $env:CODER_URL = "https://your-coder-instance.com"
 $env:CODER_SESSION_TOKEN = "your-token"
-
-# Deploy latest release (all templates)
 .\scripts\deploy-templates.ps1
 
 # Deploy a specific release
