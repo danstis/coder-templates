@@ -65,7 +65,7 @@ data "coder_parameter" "ai_plugin" {
   option {
     name  = "Oh-My-OpenCode"
     value = "oh-my-opencode"
-    icon  = "/icon/terminal.svg"
+    icon  = "/icon/opencode.svg"
   }
 }
 
@@ -231,7 +231,7 @@ resource "coder_app" "opencode" {
   agent_id     = coder_agent.main.id
   slug         = "opencode"
   display_name = "OpenCode"
-  icon         = "/icon/terminal.svg"
+  icon         = "/icon/opencode.svg"
   command      = "cd /home/coder && opencode"
 }
 
@@ -241,7 +241,7 @@ resource "coder_app" "codex" {
   agent_id     = coder_agent.main.id
   slug         = "codex"
   display_name = "OpenAI Codex"
-  icon         = "/icon/terminal.svg"
+  icon         = "/icon/openai.svg"
   command      = "cd /home/coder && codex"
 }
 
@@ -250,7 +250,7 @@ resource "coder_app" "copilot" {
   agent_id     = coder_agent.main.id
   slug         = "copilot"
   display_name = "GitHub Copilot"
-  icon         = "/icon/terminal.svg"
+  icon         = "/icon/github.svg"
   command      = "cd /home/coder && copilot"
 }
 
@@ -259,6 +259,6 @@ resource "coder_app" "gemini" {
   agent_id     = coder_agent.main.id
   slug         = "gemini"
   display_name = "Google Gemini"
-  icon         = "/icon/terminal.svg"
+  icon         = "/icon/gemini.svg"
   command      = "cd /home/coder && gemini"
 }
