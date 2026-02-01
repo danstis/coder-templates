@@ -37,8 +37,19 @@ sudo apt-get install -y nodejs
 # workspace startup when network issues occur.
 curl -fsSL https://bun.sh/install | bash -s -- --bun-dir /usr/local || true
 if ! command -v bun >/dev/null 2>&1; then
-  if [ -f /root/.bun/bin/bun ]; then
-    cp /root/.bun/bin/bun /usr/local/bin/ || true
-    chmod +x /usr/local/bin/bun || true
-  fi
+  # Try common installer locations and create system-wide symlinks so
+  # scripts using `#!/usr/bin/env bun` reliably find the binary.
+  for candidate in /usr/local/bin/bun /root/.bun/bin/bun /home/coder/.bun/bin/bun; do
+    if [ -x "$candidate" ]; then
+      ln -sf "$candidate" /usr/local/bin/bun || true
+      ln -sf "$candidate" /usr/bin/bun || true
+      chmod +x /usr/local/bin/bun /usr/bin/bun 2>/dev/null || true
+      break
+    fi
+  done
+fi
+
+# Final check: if bun still isn't available, print a warning (non-fatal)
+if ! command -v bun >/dev/null 2>&1; then
+  echo "⚠ bun not found after install attempts - relentless may fail until bun is available"
 fi
