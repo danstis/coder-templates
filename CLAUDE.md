@@ -224,6 +224,37 @@ To add a new AI plugin option (optional enhancement):
 - Wrap npm installs with `sudo` for global packages
 - Use `|| echo` in startup_script for non-fatal error handling
 
+## Icon Guidelines
+
+### Using Coder Built-in Icons
+
+Coder provides 137+ built-in icons at `/icon/`. Always prefer these over custom icons to avoid licensing concerns and ensure consistency.
+
+**Icon Reference:**
+
+| Icon | Path | Use For |
+|------|------|---------|
+| Python | `/icon/python.svg` | Python stacks |
+| Go | `/icon/go.svg` | Go stack |
+| VS Code | `/icon/code.svg` | VS Code, generic code, "None" options |
+| Claude | `/icon/claude.svg` | Claude Code, Oh-My-ClaudeCode |
+| OpenCode | `/icon/opencode.svg` | OpenCode, Oh-My-OpenCode |
+| OpenAI | `/icon/openai.svg` | Codex |
+| GitHub | `/icon/github.svg` | Copilot |
+| Gemini | `/icon/gemini.svg` | Gemini CLI |
+| Terminal | `/icon/terminal.svg` | Generic CLI tools (fallback) |
+
+**Browse all available icons:** https://github.com/coder/coder/tree/main/site/static/icon
+
+### Adding Icons to Templates
+
+When adding new `coder_parameter` options or `coder_app` resources:
+
+1. **Check Coder's built-in icons first** - Most common tools/languages are already available
+2. **Use recognizable brand icons** - Match the tool/service being represented
+3. **Fallback to generic icons** - Use `/icon/terminal.svg` or `/icon/code.svg` if no specific icon exists
+4. **Be consistent** - Use the same icon for related resources (e.g., OpenCode app and Oh-My-OpenCode plugin)
+
 ## Important Constraints
 
 ### Parameter Mutability
