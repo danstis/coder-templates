@@ -13,6 +13,9 @@ if ! id -u coder &>/dev/null; then
   echo "coder ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/coder
 fi
 
+# Ensure home directory is owned by coder user (fix for Docker volume permissions)
+chown -R coder:coder /home/coder
+
 # Install essential packages (nodejs/npm excluded - installed via nodesource below)
 apt-get install -y curl wget git expect
 
