@@ -10,25 +10,63 @@ This repository contains Terraform-based templates that provision containerized 
 
 ### ai-dev
 
-A Docker-based development workspace optimized for AI-assisted development workflows.
+A Docker-based universal AI agentic coding workspace with all major CLI tools pre-installed.
 
 | Property | Value |
 |----------|-------|
 | **Display Name** | AI Development |
-| **Description** | Docker-based development environment with AI coding agents, multiple language stacks, and VS Code Web |
+| **Description** | Universal AI workspace with 6 pre-installed AI CLI tools (Claude Code, OpenCode, Relentless, Codex, Gemini, Copilot), multiple language stacks, and VS Code Web |
 | **Icon** | `/icon/code.svg` |
 
 **Features:**
 - Ubuntu 24.04 LTS base image
 - code-server (VS Code in the browser) on port 13337
 - Persistent home directory storage
-- Choice of development stacks: Python (uv/pip), Go, Node.js
-- Choice of AI agents: Claude Code, OpenCode, Oh-My-ClaudeCode, Oh-My-OpenCode, Relentless
+- **Base AI Tools** (always installed): Claude Code, OpenCode, Relentless, OpenAI Codex, GitHub Copilot, Google Gemini
+- Choice of development stacks: Python (uv/pip), Go
+- Optional AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode
+- Node.js 24 and GitHub CLI included in base
 - Pre-configured Git author/committer from Coder profile
 - Real-time resource monitoring (CPU, RAM, disk)
 - Local VS Code connection support via Coder CLI
 
 See [templates/ai-dev/README.md](templates/ai-dev/README.md) for detailed documentation including import instructions.
+
+## AI Tool Authentication
+
+All pre-installed AI CLI tools require authentication before use. Below are the authentication requirements for each tool:
+
+| Tool | Authentication Method | Required |
+|------|----------------------|----------|
+| **Claude Code** | Anthropic API key or `claude login` | Yes - API key or account |
+| **OpenCode** | `opencode auth login` (provider-specific) | Yes - provider account |
+| **Relentless** | Uses Claude Code auth | Yes - Anthropic API key |
+| **Codex** | ChatGPT Plus/Pro or OpenAI API key | Yes - subscription or API key |
+| **Copilot** | GitHub Copilot subscription | Yes - GitHub Copilot license |
+| **Gemini** | `GOOGLE_API_KEY` env var or gcloud auth | Yes - Google account or API key |
+
+### Setting Up Authentication
+
+**Environment Variables (Recommended)**:
+```bash
+export ANTHROPIC_API_KEY="your-key-here"
+export OPENAI_API_KEY="your-key-here"
+export GOOGLE_API_KEY="your-key-here"
+```
+
+**Interactive Login**:
+```bash
+# Claude Code
+claude login
+
+# OpenCode (provider-specific)
+opencode auth login
+
+# Codex (may require device auth in headless)
+codex login --device-auth
+```
+
+**Note**: In headless Docker environments, prefer API key authentication via environment variables.
 
 ## Deployment
 
@@ -60,6 +98,9 @@ export CODER_SESSION_TOKEN=your-token
 # Deploy a specific release
 ./scripts/deploy-templates.sh --release v1.2.0
 
+# Deploy latest pre-release (from PR builds)
+./scripts/deploy-templates.sh --prerelease
+
 # Deploy only a specific template
 ./scripts/deploy-templates.sh --template ai-dev
 
@@ -80,6 +121,9 @@ $env:CODER_SESSION_TOKEN = "your-token"
 
 # Deploy a specific release
 .\scripts\deploy-templates.ps1 -Release "v1.2.0"
+
+# Deploy latest pre-release (from PR builds)
+.\scripts\deploy-templates.ps1 -Prerelease
 
 # Deploy only a specific template
 .\scripts\deploy-templates.ps1 -Template "ai-dev"
@@ -157,9 +201,11 @@ $env:CODER_SESSION_TOKEN = "your-token"
 
 ## Release Process
 
-Releases are **fully automated** via GitHub Actions. The workflow is triggered on every push to the `main` branch.
+Releases are **fully automated** via GitHub Actions. The workflow is triggered on every push to the `main` branch and on pull requests.
 
 ### How It Works
+
+**Production Releases (push to main):**
 
 1. **Packaging**: All templates in `templates/` are automatically packaged into zip files using `scripts/package-template.sh`
 
@@ -170,6 +216,21 @@ Releases are **fully automated** via GitHub Actions. The workflow is triggered o
 4. **Release Creation**: A GitHub release is created with:
    - Release notes generated from commit messages
    - All packaged template zip files as downloadable assets
+
+**Pre-releases (pull requests):**
+
+1. **Packaging**: Templates are packaged the same way as production releases
+
+2. **Pre-release Versioning**: A semver pre-release tag is created using the format:
+   ```
+   v{major}.{minor}.{patch+1}-pr.{pr_number}.{run_number}
+   ```
+   For example, if the latest release is `v1.2.3` and PR #42 triggers run #15, the pre-release will be `v1.2.4-pr.42.15`
+
+3. **Pre-release Creation**: A GitHub pre-release is created with:
+   - Pre-release flag enabled (not shown as "latest")
+   - PR title and description in release notes
+   - All packaged template zip files for testing
 
 ### Commit Message Format
 
@@ -240,19 +301,16 @@ coder-templates/
 │       ├── main.tf                # Terraform configuration
 │       ├── README.md              # Template documentation
 │       ├── scripts/
-│       │   ├── common-deps.sh     # Shared dependency installation
+│       │   ├── common-deps.sh     # Shared dependencies (Node 24, gh CLI)
+│       │   ├── base-ai-tools.sh   # All 6 base AI CLI tools
 │       │   ├── install-oh-my-claudecode.sh
 │       │   ├── stacks/            # Development stack installers
 │       │   │   ├── python-uv.sh
 │       │   │   ├── python-pip.sh
-│       │   │   ├── go.sh
-│       │   │   └── node.sh
-│       │   └── agents/            # AI agent installers
-│       │       ├── claude.sh
-│       │       ├── opencode.sh
+│       │   │   └── go.sh
+│       │   └── agents/            # AI plugin installers
 │       │       ├── oh-my-claudecode.sh
-│       │       ├── oh-my-opencode.sh
-│       │       └── relentless.sh
+│       │       └── oh-my-opencode.sh
 ├── CLAUDE.md                      # AI assistant guidance
 └── README.md                      # This file
 ```

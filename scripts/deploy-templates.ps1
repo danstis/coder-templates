@@ -9,6 +9,9 @@
 .PARAMETER Release
     The release tag to deploy. Defaults to 'latest'.
 
+.PARAMETER Prerelease
+    Deploy the latest pre-release version (from PR builds).
+
 .PARAMETER Template
     Deploy only a specific template. If not specified, all templates are deployed.
 
@@ -39,6 +42,10 @@
     .\deploy-templates.ps1 -Release "v1.2.0"
 
 .EXAMPLE
+    # Deploy latest pre-release (from PR)
+    .\deploy-templates.ps1 -Prerelease
+
+.EXAMPLE
     # Deploy only ai-dev template
     .\deploy-templates.ps1 -Template "ai-dev"
 
@@ -50,6 +57,7 @@
 [CmdletBinding()]
 param(
     [string]$Release = "latest",
+    [switch]$Prerelease,
     [string]$Template = "",
     [switch]$DryRun,
     [string]$CoderUrl = $env:CODER_URL,
@@ -158,7 +166,35 @@ try {
     Write-Info "Fetching release info for: $GitHubRepo"
 
     try {
-        if ($Release -eq "latest") {
+        if ($Prerelease) {
+            # Get the latest pre-release
+            Write-Info "Looking for latest pre-release..."
+            $ReleasesJson = & gh release list --repo $GitHubRepo --limit 20 --json tagName,isPrerelease 2>&1
+            
+            if ($LASTEXITCODE -ne 0) {
+                throw $ReleasesJson
+            }
+            
+            $Releases = $ReleasesJson | ConvertFrom-Json
+            $LatestPrerelease = $Releases | Where-Object { $_.isPrerelease -eq $true } | Select-Object -First 1
+            
+            if (-not $LatestPrerelease) {
+                Write-Error "No pre-release found in repository"
+                Write-Host ""
+                Write-Host "Possible causes:" -ForegroundColor Yellow
+                Write-Host "  1. No pre-releases have been created yet"
+                Write-Host "  2. No open pull requests with workflow runs"
+                Write-Host ""
+                Write-Host "To deploy the latest stable release instead:" -ForegroundColor Cyan
+                Write-Host "  .\deploy-templates.ps1"
+                exit 1
+            }
+            
+            $Release = $LatestPrerelease.tagName
+            Write-Info "Found pre-release: $Release"
+            $ReleaseJson = & gh release view $Release --repo $GitHubRepo --json tagName,assets 2>&1
+        }
+        elseif ($Release -eq "latest") {
             $ReleaseJson = & gh release view --repo $GitHubRepo --json tagName,assets 2>&1
         } else {
             $ReleaseJson = & gh release view $Release --repo $GitHubRepo --json tagName,assets 2>&1

@@ -38,6 +38,7 @@ jobs:
           path: dist/*.zip
           if-no-files-found: error
 
+      # Production release - push to main
       - name: Bump version and push tag
         id: tag_version
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -53,3 +54,49 @@ jobs:
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
           files: dist/*.zip
+
+      # Pre-release - pull requests
+      - name: Calculate pre-release version
+        id: prerelease_version
+        if: github.event_name == 'pull_request'
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Strip 'v' prefix for processing
+          VERSION=${LATEST_TAG#v}
+          
+          # Parse major.minor.patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION%%-*}"
+          
+          # Increment patch for pre-release base
+          NEXT_PATCH=$((PATCH + 1))
+          
+          # Create pre-release version: v{major}.{minor}.{patch}-pr.{pr_number}.{run_number}
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          RUN_NUMBER=${{ github.run_number }}
+          PRERELEASE_TAG="v${MAJOR}.${MINOR}.${NEXT_PATCH}-pr.${PR_NUMBER}.${RUN_NUMBER}"
+          
+          echo "Pre-release tag: $PRERELEASE_TAG"
+          echo "tag=$PRERELEASE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create Pre-release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'pull_request'
+        with:
+          tag_name: ${{ steps.prerelease_version.outputs.tag }}
+          name: Pre-release ${{ steps.prerelease_version.outputs.tag }}
+          body: |
+            ## Pre-release from PR #${{ github.event.pull_request.number }}
+            
+            **Branch:** ${{ github.head_ref }}
+            **PR Title:** ${{ github.event.pull_request.title }}
+            
+            This is an automated pre-release for testing. Do not use in production.
+            
+            ### Changes
+            ${{ github.event.pull_request.body }}
+          files: dist/*.zip
+          prerelease: true
+          target_commitish: ${{ github.event.pull_request.head.sha }}

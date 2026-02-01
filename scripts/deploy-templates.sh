@@ -7,6 +7,7 @@
 #
 # Options:
 #   --release <tag>    Deploy a specific release (default: latest)
+#   --prerelease       Deploy the latest pre-release version
 #   --template <name>  Deploy only a specific template (default: all)
 #   --dry-run          Show what would be deployed without executing
 #   --help             Show this help message
@@ -32,6 +33,9 @@
 #   # Deploy specific release
 #   ./scripts/deploy-templates.sh --release v1.2.0
 #
+#   # Deploy latest pre-release (from PR)
+#   ./scripts/deploy-templates.sh --prerelease
+#
 #   # Deploy only ai-dev template
 #   ./scripts/deploy-templates.sh --template ai-dev
 #
@@ -40,6 +44,7 @@ set -euo pipefail
 
 # Default values
 RELEASE="latest"
+PRERELEASE=false
 TEMPLATE=""
 DRY_RUN=false
 GITHUB_REPO="${GITHUB_REPO:-danstis/coder-templates}"
@@ -108,6 +113,10 @@ while [[ $# -gt 0 ]]; do
             RELEASE="$2"
             shift 2
             ;;
+        --prerelease)
+            PRERELEASE=true
+            shift
+            ;;
         --template)
             TEMPLATE="$2"
             shift 2
@@ -159,7 +168,34 @@ log_info "Working directory: $WORK_DIR"
 # Fetch release information using gh CLI
 log_info "Fetching release info for: $GITHUB_REPO"
 
-if [[ "$RELEASE" == "latest" ]]; then
+if [[ "$PRERELEASE" == true ]]; then
+    # Get the latest pre-release
+    log_info "Looking for latest pre-release..."
+    PRERELEASE_TAG=$(gh release list --repo "$GITHUB_REPO" --limit 20 --json tagName,isPrerelease \
+        | grep -o '"tagName":"[^"]*","isPrerelease":true' \
+        | head -1 \
+        | grep -o '"tagName":"[^"]*"' \
+        | cut -d'"' -f4) || true
+    
+    if [[ -z "$PRERELEASE_TAG" ]]; then
+        log_error "No pre-release found in repository"
+        echo ""
+        echo -e "${YELLOW}Possible causes:${NC}"
+        echo "  1. No pre-releases have been created yet"
+        echo "  2. No open pull requests with workflow runs"
+        echo ""
+        echo -e "${GREEN}To deploy the latest stable release instead:${NC}"
+        echo "  ./scripts/deploy-templates.sh"
+        exit 1
+    fi
+    
+    RELEASE="$PRERELEASE_TAG"
+    log_info "Found pre-release: $RELEASE"
+    RELEASE_INFO=$(gh release view "$RELEASE" --repo "$GITHUB_REPO" --json tagName,assets 2>&1) || {
+        log_error "Failed to fetch pre-release information for: $RELEASE"
+        exit 1
+    }
+elif [[ "$RELEASE" == "latest" ]]; then
     RELEASE_INFO=$(gh release view --repo "$GITHUB_REPO" --json tagName,assets 2>&1) || {
         log_error "Failed to fetch release information"
         echo ""

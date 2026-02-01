@@ -38,33 +38,28 @@ data "coder_parameter" "stack" {
     icon  = "/icon/go.svg"
   }
   option {
-    name  = "Node.js"
-    value = "node"
-    icon  = "/icon/nodejs.svg"
-  }
-  option {
     name  = "None"
     value = "none"
     icon  = "/icon/code.svg"
   }
 }
 
-data "coder_parameter" "ai_agent" {
-  name         = "ai_agent"
-  display_name = "AI Agent"
-  description  = "Select the AI coding agent to install"
-  default      = "oh-my-claudecode"
+data "coder_parameter" "ai_plugin" {
+  name         = "ai_plugin"
+  display_name = "AI Agent Plugin"
+  description  = "Select optional AI agent plugin (oh-my-* tools that enhance base CLI tools)"
+  default      = "none"
   type         = "string"
   mutable      = false
 
   option {
-    name  = "Oh-My-ClaudeCode"
-    value = "oh-my-claudecode"
-    icon  = "/icon/claude.svg"
+    name  = "None"
+    value = "none"
+    icon  = "/icon/code.svg"
   }
   option {
-    name  = "Claude Code"
-    value = "claude"
+    name  = "Oh-My-ClaudeCode"
+    value = "oh-my-claudecode"
     icon  = "/icon/claude.svg"
   }
   option {
@@ -72,48 +67,32 @@ data "coder_parameter" "ai_agent" {
     value = "oh-my-opencode"
     icon  = "/icon/terminal.svg"
   }
-  option {
-    name  = "OpenCode"
-    value = "opencode"
-    icon  = "/icon/terminal.svg"
-  }
-  option {
-    name  = "Relentless"
-    value = "relentless"
-    icon  = "/icon/terminal.svg"
-  }
-  option {
-    name  = "None"
-    value = "none"
-    icon  = "/icon/code.svg"
-  }
 }
 
 locals {
-  # Stack installation scripts from files
+  # Stack installation scripts from files (node removed - now in common-deps.sh)
   stack_install = lookup({
     "python-uv"  = file("${path.module}/scripts/stacks/python-uv.sh")
     "python-pip" = file("${path.module}/scripts/stacks/python-pip.sh")
     "go"         = file("${path.module}/scripts/stacks/go.sh")
-    "node"       = file("${path.module}/scripts/stacks/node.sh")
     "none"       = "echo 'No development stack selected'"
   }, data.coder_parameter.stack.value, "echo 'Unknown stack'")
 
-  # AI agent installation scripts from files
-  ai_agent_install = lookup({
-    "claude"           = file("${path.module}/scripts/agents/claude.sh")
-    "opencode"         = file("${path.module}/scripts/agents/opencode.sh")
+  # Plugin installation scripts (renamed from ai_agent_install)
+  ai_plugin_install = lookup({
     "oh-my-claudecode" = file("${path.module}/scripts/agents/oh-my-claudecode.sh")
     "oh-my-opencode"   = file("${path.module}/scripts/agents/oh-my-opencode.sh")
-    "relentless"       = file("${path.module}/scripts/agents/relentless.sh")
-    "none"             = "echo 'No AI agent selected'"
-  }, data.coder_parameter.ai_agent.value, "echo 'Unknown AI agent'")
+    "none"             = "echo 'No AI plugin selected'"
+  }, data.coder_parameter.ai_plugin.value, "echo 'Unknown AI plugin'")
 
   # Common dependencies script
   common_deps = file("${path.module}/scripts/common-deps.sh")
 
+  # Base AI tools script
+  base_ai_tools = file("${path.module}/scripts/base-ai-tools.sh")
+
   # Determine if we need the oh-my-claudecode install script
-  include_oh_my_claudecode_script = data.coder_parameter.ai_agent.value == "oh-my-claudecode"
+  include_oh_my_claudecode_script = data.coder_parameter.ai_plugin.value == "oh-my-claudecode"
 }
 
 resource "docker_volume" "home_volume" {
@@ -127,18 +106,23 @@ resource "coder_agent" "main" {
     #!/bin/bash
     set -e
 
-    # Run common dependencies installation
+    # Run common dependencies installation (now includes Node 24 + gh CLI)
     ${local.common_deps}
+
+    # Install all base AI CLI tools
+    (
+      ${local.base_ai_tools}
+    ) || echo "Base AI tools installation completed with errors"
 
     # Install selected development stack
     (
       ${local.stack_install}
     ) || echo "Stack installation completed with errors"
 
-    # Install selected AI agent
+    # Install selected AI plugin
     (
-      ${local.ai_agent_install}
-    ) || echo "AI agent installation completed with errors"
+      ${local.ai_plugin_install}
+    ) || echo "AI plugin installation completed with errors"
 
     # Create oh-my-claudecode setup script if selected
     %{if local.include_oh_my_claudecode_script}
@@ -155,7 +139,7 @@ EOF
     fi
 
     # Start code-server as coder user
-    sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder &
+    sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
   EOT
 
   env = {
@@ -233,9 +217,8 @@ resource "coder_app" "code_server" {
   }
 }
 
-# Claude Code app - shown for claude and oh-my-claudecode options
+# Claude Code app - always available (base AI tool)
 resource "coder_app" "claude_code" {
-  count        = contains(["claude", "oh-my-claudecode"], data.coder_parameter.ai_agent.value) ? 1 : 0
   agent_id     = coder_agent.main.id
   slug         = "claude-code"
   display_name = "Claude Code"
@@ -243,9 +226,8 @@ resource "coder_app" "claude_code" {
   command      = "cd /home/coder && claude"
 }
 
-# OpenCode app - shown for opencode and oh-my-opencode options
+# OpenCode app - always available (base AI tool)
 resource "coder_app" "opencode" {
-  count        = contains(["opencode", "oh-my-opencode"], data.coder_parameter.ai_agent.value) ? 1 : 0
   agent_id     = coder_agent.main.id
   slug         = "opencode"
   display_name = "OpenCode"
@@ -253,12 +235,30 @@ resource "coder_app" "opencode" {
   command      = "cd /home/coder && opencode"
 }
 
-# Relentless app - shown for relentless option
-resource "coder_app" "relentless" {
-  count        = data.coder_parameter.ai_agent.value == "relentless" ? 1 : 0
+
+# Codex app - always available (base AI tool)
+resource "coder_app" "codex" {
   agent_id     = coder_agent.main.id
-  slug         = "relentless"
-  display_name = "Relentless"
+  slug         = "codex"
+  display_name = "OpenAI Codex"
   icon         = "/icon/terminal.svg"
-  command      = "cd /home/coder && relentless"
+  command      = "cd /home/coder && codex"
+}
+
+# Copilot app - always available (base AI tool)
+resource "coder_app" "copilot" {
+  agent_id     = coder_agent.main.id
+  slug         = "copilot"
+  display_name = "GitHub Copilot"
+  icon         = "/icon/terminal.svg"
+  command      = "cd /home/coder && copilot"
+}
+
+# Gemini app - always available (base AI tool)
+resource "coder_app" "gemini" {
+  agent_id     = coder_agent.main.id
+  slug         = "gemini"
+  display_name = "Google Gemini"
+  icon         = "/icon/terminal.svg"
+  command      = "cd /home/coder && gemini"
 }
