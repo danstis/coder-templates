@@ -2,6 +2,41 @@
 
 A Docker-based Coder template optimized for AI development workflows with code-server (VS Code in the browser).
 
+## Template Metadata
+
+When importing this template into Coder, use the following recommended metadata:
+
+| Property | Value |
+|----------|-------|
+| **Name** | `ai-dev` |
+| **Display Name** | AI Development |
+| **Description** | Docker-based development environment with AI coding agents, multiple language stacks, and VS Code Web |
+| **Icon** | `/icon/code.svg` |
+
+### CLI Import
+
+```bash
+# Create the template with metadata
+coder templates push ai-dev \
+  --directory templates/ai-dev
+
+# Set display name, description, and icon after creation
+coder templates edit ai-dev \
+  --display-name "AI Development" \
+  --description "Docker-based development environment with AI coding agents, multiple language stacks, and VS Code Web" \
+  --icon "/icon/code.svg"
+```
+
+### Web UI Import
+
+When creating the template through the Coder dashboard:
+1. Click "Create Template" → "From scratch"
+2. Upload or paste the template files
+3. Set the name to `ai-dev`
+4. Set the display name to "AI Development"
+5. Set the description to "Docker-based development environment with AI coding agents, multiple language stacks, and VS Code Web"
+6. Select an appropriate icon (e.g., Code icon)
+
 ## Overview
 
 This template provides a complete development environment running in a Docker container with:
@@ -97,7 +132,85 @@ This template comes with [Claude Code](https://docs.anthropic.com/claude/docs/cl
     ```
     This script automates the plugin installation commands.
 
+## Template Architecture
+
+### Scripts Directory Structure
+
+The template includes modular installation scripts organized by category:
+
+```
+scripts/
+├── common-deps.sh          # Shared dependencies (sudo, git, curl, wget, nodejs, npm)
+├── install-oh-my-claudecode.sh
+├── stacks/                 # Development stack installers
+│   ├── python-uv.sh        # Python with uv package manager
+│   ├── python-pip.sh       # Python with pip
+│   ├── go.sh               # Go language
+│   └── node.sh             # Node.js 24.x
+└── agents/                 # AI agent installers
+    ├── claude.sh           # Claude Code
+    ├── opencode.sh         # OpenCode
+    ├── oh-my-claudecode.sh # Oh-My-ClaudeCode
+    ├── oh-my-opencode.sh   # Oh-My-OpenCode
+    └── relentless.sh       # Relentless
+```
+
+### How Scripts Are Used
+
+The `main.tf` file uses Terraform's `file()` function to load these scripts dynamically based on workspace parameters:
+
+1. **common-deps.sh** is always executed first to install shared dependencies
+2. **Stack scripts** are selected based on the `stack` parameter (python-uv, python-pip, go, node, or none)
+3. **Agent scripts** are selected based on the `ai_agent` parameter (claude, opencode, oh-my-claudecode, oh-my-opencode, relentless, or none)
+
+This modular approach allows:
+- Easy addition of new stacks or agents by creating new scripts
+- Clear separation of concerns
+- Reusable components for other templates
+- Simplified main.tf configuration
+
 ## Customization
+
+### Adding a New Development Stack
+
+1. Create a new script in `scripts/stacks/your-stack.sh`:
+   ```bash
+   #!/bin/bash
+   # your-stack.sh - Install Your Stack
+   # Requires: apt (from common-deps.sh)
+   set -e
+
+   sudo apt-get install -y your-stack-package
+   ```
+
+2. Add to the `data "coder_parameter" "stack"` options in `main.tf`:
+   ```hcl
+   option {
+     name  = "Your Stack"
+     value = "your-stack"
+     icon  = "/icon/your-icon.svg"
+   }
+   ```
+
+3. Add to the `stack_install` lookup in the locals block:
+   ```hcl
+   "your-stack" = file("${path.module}/scripts/stacks/your-stack.sh")
+   ```
+
+### Adding a New AI Agent
+
+1. Create a new script in `scripts/agents/your-agent.sh`:
+   ```bash
+   #!/bin/bash
+   # your-agent.sh - Install Your Agent
+   # Requires: Node.js and npm (from common-deps.sh)
+   set -e
+
+   sudo npm install -g your-agent-package
+   ```
+
+2. Add to the `data "coder_parameter" "ai_agent"` options in `main.tf`
+3. Add to the `ai_agent_install` lookup in the locals block
 
 ### Changing the Base Image
 
@@ -107,21 +220,6 @@ Edit `main.tf` and modify the `image` attribute in the `docker_container` resour
 resource "docker_container" "workspace" {
   image = "ubuntu:24.04"  # Change to your preferred image
   # ...
-}
-```
-
-### Installing Additional Packages
-
-Add installation commands to the `startup_script` in the `coder_agent` resource:
-
-```hcl
-resource "coder_agent" "main" {
-  startup_script = <<-EOT
-    # ... existing setup ...
-
-    # Install additional packages
-    sudo apt-get install -y python3 python3-pip nodejs npm
-  EOT
 }
 ```
 

@@ -90,50 +90,27 @@ data "coder_parameter" "ai_agent" {
 }
 
 locals {
-  # Stack installation scripts
+  # Stack installation scripts from files
   stack_install = lookup({
-    "python-uv"  = <<-EOF
-      # Install Python with uv
-      curl -LsSf https://astral.sh/uv/install.sh | sudo -u coder sh
-      echo 'export PATH="$HOME/.local/bin:$PATH"' | sudo -u coder tee -a /home/coder/.bashrc
-    EOF
-    "python-pip" = <<-EOF
-      # Install Python with pip
-      sudo apt-get install -y python3 python3-pip python3-venv
-    EOF
-    "go"         = <<-EOF
-      # Install Go
-      sudo apt-get install -y golang
-    EOF
-    "node"       = <<-EOF
-      # Install Node.js 24.x
-      curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
-      sudo apt-get install -y nodejs
-    EOF
+    "python-uv"  = file("${path.module}/scripts/stacks/python-uv.sh")
+    "python-pip" = file("${path.module}/scripts/stacks/python-pip.sh")
+    "go"         = file("${path.module}/scripts/stacks/go.sh")
+    "node"       = file("${path.module}/scripts/stacks/node.sh")
     "none"       = "echo 'No development stack selected'"
   }, data.coder_parameter.stack.value, "echo 'Unknown stack'")
 
-  # AI agent installation scripts
+  # AI agent installation scripts from files
   ai_agent_install = lookup({
-    "claude"           = <<-EOF
-      sudo npm install -g @anthropic-ai/claude-code
-    EOF
-    "opencode"         = <<-EOF
-      sudo npm install -g opencode-ai
-    EOF
-    "oh-my-claudecode" = <<-EOF
-      sudo npm install -g @anthropic-ai/claude-code
-      # oh-my-claudecode setup script available at /home/coder/install-oh-my-claudecode.sh
-    EOF
-    "oh-my-opencode"   = <<-EOF
-      sudo npm install -g oh-my-opencode
-    EOF
-    "relentless"       = <<-EOF
-      sudo npm install -g @anthropic-ai/claude-code
-      sudo npm install -g @arvorco/relentless
-    EOF
+    "claude"           = file("${path.module}/scripts/agents/claude.sh")
+    "opencode"         = file("${path.module}/scripts/agents/opencode.sh")
+    "oh-my-claudecode" = file("${path.module}/scripts/agents/oh-my-claudecode.sh")
+    "oh-my-opencode"   = file("${path.module}/scripts/agents/oh-my-opencode.sh")
+    "relentless"       = file("${path.module}/scripts/agents/relentless.sh")
     "none"             = "echo 'No AI agent selected'"
   }, data.coder_parameter.ai_agent.value, "echo 'Unknown AI agent'")
+
+  # Common dependencies script
+  common_deps = file("${path.module}/scripts/common-deps.sh")
 
   # Determine if we need the oh-my-claudecode install script
   include_oh_my_claudecode_script = data.coder_parameter.ai_agent.value == "oh-my-claudecode"
@@ -148,20 +125,10 @@ resource "coder_agent" "main" {
   arch           = "amd64"
   startup_script = <<-EOT
     #!/bin/bash
+    set -e
 
-    # Install sudo first (needed for subsequent commands)
-    apt-get update && apt-get install -y sudo
-
-    # Create coder user if it doesn't exist
-    if ! id -u coder &>/dev/null; then
-      sudo useradd -m -s /bin/bash coder
-      sudo usermod -aG sudo coder
-      echo "coder ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/coder
-    fi
-
-    # Install essential packages
-    sudo apt-get update
-    sudo apt-get install -y curl wget git nodejs npm expect
+    # Run common dependencies installation
+    ${local.common_deps}
 
     # Install selected development stack
     (

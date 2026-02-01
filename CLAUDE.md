@@ -30,24 +30,46 @@ The `ai-dev` template follows this resource hierarchy:
 6. **Container**: `docker_container` that runs the agent init script
 7. **Apps**: `coder_app` resources exposing web services (code-server)
 
-### Dynamic Installation Pattern
+### Modular Script Architecture
 
-The template uses a parameterized installation pattern:
+The template uses modular installation scripts loaded via Terraform's `file()` function:
 
+**Scripts Directory:**
+```
+scripts/
+├── common-deps.sh          # Shared dependencies (always executed)
+├── install-oh-my-claudecode.sh
+├── stacks/                 # Development stack installers
+│   ├── python-uv.sh
+│   ├── python-pip.sh
+│   ├── go.sh
+│   └── node.sh
+└── agents/                 # AI agent installers
+    ├── claude.sh
+    ├── opencode.sh
+    ├── oh-my-claudecode.sh
+    ├── oh-my-opencode.sh
+    └── relentless.sh
+```
+
+**Terraform Implementation:**
 ```hcl
-data "coder_parameter" "stack" {
-  # User selects from python-uv, python-pip, go, node, none
-}
-
 locals {
+  # Load scripts using file() function
   stack_install = lookup({
-    "python-uv" = "# install script..."
+    "python-uv"  = file("${path.module}/scripts/stacks/python-uv.sh")
+    "python-pip" = file("${path.module}/scripts/stacks/python-pip.sh")
     # ... other options
   }, data.coder_parameter.stack.value, "default")
 }
 ```
 
-This pattern is used for both development stacks and AI agents.
+Benefits of this approach:
+- Scripts are external files, not inline in Terraform
+- Easy to add new stacks/agents without modifying main.tf
+- Better readability and maintainability
+- Scripts can be tested independently
+- Clear separation of concerns between Terraform logic and installation logic
 
 ## Development Commands
 
@@ -83,13 +105,14 @@ coder templates push ai-dev -d templates/ai-dev
 
 The `coder_agent.startup_script` executes in the container on startup. Critical ordering:
 
-1. Install `sudo` first (required for user creation)
-2. Create `coder` user with passwordless sudo
-3. Install essential packages (`curl`, `wget`, `git`)
-4. Install selected stack (wrapped in subshell with `|| echo` for non-fatal errors)
-5. Install selected AI agent (wrapped in subshell with `|| echo` for non-fatal errors)
-6. Install code-server if not present
-7. Start code-server in background on port 13337
+1. **Run common-deps.sh** - Installs sudo, creates coder user, installs shared dependencies (curl, wget, git, nodejs, npm, expect)
+2. **Run stack script** - Installs selected development stack based on parameter
+3. **Run agent script** - Installs selected AI agent based on parameter
+4. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
+5. **Install code-server** - If not already present
+6. **Start code-server** - In background on port 13337
+
+Each installation step is wrapped in a subshell with `|| echo` for non-fatal error handling, allowing the container to start even if optional installations fail.
 
 ### Network Configuration
 
@@ -128,6 +151,65 @@ Container and volume names follow the pattern: `coder-{owner}-{workspace}` for c
 - **none**: No AI agent
 
 All AI agents require Node.js and are installed globally via npm.
+
+## Extending the Template
+
+### Adding a New Development Stack
+
+To add a new development stack option:
+
+1. **Create the installation script** at `scripts/stacks/your-stack.sh`:
+   ```bash
+   #!/bin/bash
+   # your-stack.sh - Install Your Stack
+   # Requires: apt (from common-deps.sh)
+   set -e
+
+   sudo apt-get install -y your-stack-package
+   ```
+
+2. **Add parameter option** in `main.tf`:
+   ```hcl
+   option {
+     name  = "Your Stack"
+     value = "your-stack"
+     icon  = "/icon/your-icon.svg"
+   }
+   ```
+
+3. **Add to lookup** in the locals block:
+   ```hcl
+   "your-stack" = file("${path.module}/scripts/stacks/your-stack.sh")
+   ```
+
+### Adding a New AI Agent
+
+To add a new AI agent option:
+
+1. **Create the installation script** at `scripts/agents/your-agent.sh`:
+   ```bash
+   #!/bin/bash
+   # your-agent.sh - Install Your Agent
+   # Requires: Node.js and npm (from common-deps.sh)
+   set -e
+
+   sudo npm install -g your-agent-package
+   ```
+
+2. **Add parameter option** in `main.tf` under `data "coder_parameter" "ai_agent"`
+
+3. **Add to lookup** in the locals block under `ai_agent_install`
+
+### Script Writing Guidelines
+
+- All scripts require `#!/bin/bash` shebang
+- Include descriptive header comments
+- Document dependencies (which common scripts they rely on)
+- Use `set -e` to exit on errors
+- Use `sudo` for privileged operations (runs as root in container)
+- Use `sudo -u coder` for operations that should run as the coder user
+- Wrap npm installs with `sudo` for global packages
+- Use `|| echo` in startup_script for non-fatal error handling
 
 ## Important Constraints
 
