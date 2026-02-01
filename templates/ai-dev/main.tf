@@ -235,14 +235,6 @@ resource "coder_app" "opencode" {
   command      = "cd /home/coder && opencode"
 }
 
-# Relentless app - always available (base AI tool)
-resource "coder_app" "relentless" {
-  agent_id     = coder_agent.main.id
-  slug         = "relentless"
-  display_name = "Relentless"
-  icon         = "/icon/terminal.svg"
-  command      = "cd /home/coder && relentless"
-}
 
 # Codex app - always available (base AI tool)
 resource "coder_app" "codex" {
