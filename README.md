@@ -12,6 +12,12 @@ This repository contains Terraform-based templates that provision containerized 
 
 A Docker-based development workspace optimized for AI-assisted development workflows.
 
+| Property | Value |
+|----------|-------|
+| **Display Name** | AI Development |
+| **Description** | Docker-based development environment with AI coding agents, multiple language stacks, and VS Code Web |
+| **Icon** | `/icon/code.svg` |
+
 **Features:**
 - Ubuntu 24.04 LTS base image
 - code-server (VS Code in the browser) on port 13337
@@ -22,7 +28,7 @@ A Docker-based development workspace optimized for AI-assisted development workf
 - Real-time resource monitoring (CPU, RAM, disk)
 - Local VS Code connection support via Coder CLI
 
-See [templates/ai-dev/README.md](templates/ai-dev/README.md) for detailed documentation.
+See [templates/ai-dev/README.md](templates/ai-dev/README.md) for detailed documentation including import instructions.
 
 ## Deployment
 
