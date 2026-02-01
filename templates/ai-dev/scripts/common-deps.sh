@@ -17,7 +17,7 @@ fi
 chown -R coder:coder /home/coder
 
 # Install essential packages (nodejs/npm excluded - installed via nodesource below)
-apt-get install -y curl wget git expect
+apt-get install -y curl wget git expect unzip
 
 # GitHub CLI
 curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
