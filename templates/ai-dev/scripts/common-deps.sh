@@ -17,7 +17,9 @@ fi
 chown -R coder:coder /home/coder
 
 # Install essential packages (nodejs/npm excluded - installed via nodesource below)
+# We do this twice to be absolutely sure unzip is available for the bun installer
 apt-get install -y curl wget git expect unzip
+unzip -v >/dev/null 2>&1 || (apt-get update && apt-get install -y unzip)
 
 # GitHub CLI
 curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -35,6 +37,10 @@ sudo apt-get install -y nodejs
 # the `bun` binary is on PATH for all users. Fall back to copying from the
 # installer location if necessary. Non-fatal on failure to avoid breaking
 # workspace startup when network issues occur.
+if ! command -v unzip >/dev/null 2>&1; then
+  echo "Installing missing unzip for bun..."
+  apt-get update && apt-get install -y unzip
+fi
 curl -fsSL https://bun.sh/install | bash -s -- --bun-dir /usr/local || true
 if ! command -v bun >/dev/null 2>&1; then
   # Try common installer locations and create system-wide symlinks so
