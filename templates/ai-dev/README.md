@@ -160,10 +160,11 @@ scripts/
 The `main.tf` file uses Terraform's `file()` function to load these scripts dynamically based on workspace parameters:
 
 1. **common-deps.sh** is always executed first to install shared dependencies
-2. **Stack scripts** are selected based on the `stack` parameter (python-uv, python-pip, go, node, or none)
-3. **Agent scripts** are selected based on the `ai_agent` parameter (claude, opencode, oh-my-claudecode, oh-my-opencode, relentless, or none)
+2. **Stack scripts** are conditionally included based on individual boolean toggle parameters — users can enable multiple stacks simultaneously
+3. **Plugin scripts** are conditionally included based on individual boolean toggle parameters — users can enable multiple plugins simultaneously
 
 This modular approach allows:
+- Multi-select for stacks and plugins (any combination)
 - Easy addition of new stacks or agents by creating new scripts
 - Clear separation of concerns
 - Reusable components for other templates
@@ -183,34 +184,55 @@ This modular approach allows:
    sudo apt-get install -y your-stack-package
    ```
 
-2. Add to the `data "coder_parameter" "stack"` options in `main.tf`:
+2. Add a bool parameter in `main.tf`:
    ```hcl
-   option {
-     name  = "Your Stack"
-     value = "your-stack"
-     icon  = "/icon/your-icon.svg"
+   data "coder_parameter" "stack_your_stack" {
+     name         = "stack_your_stack"
+     display_name = "Your Stack"
+     description  = "Install Your Stack"
+     icon         = "/icon/your-icon.svg"
+     type         = "bool"
+     default      = "false"
+     mutable      = false
+     order        = 4  # increment from last stack order
    }
    ```
 
-3. Add to the `stack_install` lookup in the locals block:
+3. Add a conditional entry in the `stack_install` local:
    ```hcl
-   "your-stack" = file("${path.module}/scripts/stacks/your-stack.sh")
+   data.coder_parameter.stack_your_stack.value == "true" ? file("${path.module}/scripts/stacks/your-stack.sh") : "",
    ```
 
-### Adding a New AI Agent
+### Adding a New AI Plugin
 
-1. Create a new script in `scripts/agents/your-agent.sh`:
+1. Create a new script in `scripts/agents/your-plugin.sh`:
    ```bash
    #!/bin/bash
-   # your-agent.sh - Install Your Agent
+   # your-plugin.sh - Install Your Plugin
    # Requires: Node.js and npm (from common-deps.sh)
    set -e
 
-   sudo npm install -g your-agent-package
+   sudo npm install -g your-plugin-package
    ```
 
-2. Add to the `data "coder_parameter" "ai_agent"` options in `main.tf`
-3. Add to the `ai_agent_install` lookup in the locals block
+2. Add a bool parameter in `main.tf`:
+   ```hcl
+   data "coder_parameter" "plugin_your_plugin" {
+     name         = "plugin_your_plugin"
+     display_name = "Your Plugin"
+     description  = "Install Your Plugin"
+     icon         = "/icon/your-icon.svg"
+     type         = "bool"
+     default      = "false"
+     mutable      = false
+     order        = 6  # increment from last plugin order
+   }
+   ```
+
+3. Add a conditional entry in the `ai_plugin_install` local:
+   ```hcl
+   data.coder_parameter.plugin_your_plugin.value == "true" ? file("${path.module}/scripts/agents/your-plugin.sh") : "",
+   ```
 
 ### Changing the Base Image
 

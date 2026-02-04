@@ -23,8 +23,8 @@ A Docker-based universal AI agentic coding workspace with all major CLI tools pr
 - code-server (VS Code in the browser) on port 13337
 - Persistent home directory storage
 - **Base AI Tools** (always installed): Claude Code, OpenCode, Relentless, OpenAI Codex, GitHub Copilot, Google Gemini
-- Choice of development stacks: Python (uv/pip), Go
-- Optional AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode
+- Multi-select development stacks: Python (uv), Python (pip), Go — enable any combination
+- Multi-select AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode — enable any combination
 - Node.js 24 and GitHub CLI included in base
 - Pre-configured Git author/committer from Coder profile
 - Real-time resource monitoring (CPU, RAM, disk)

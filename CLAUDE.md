@@ -23,8 +23,8 @@ Templates use two key providers:
 The `ai-dev` template follows this resource hierarchy:
 
 1. **Data Sources**: `coder_workspace`, `coder_workspace_owner` provide workspace context
-2. **Parameters**: `coder_parameter` resources define user-selectable options (stack, AI agent)
-3. **Locals**: Dynamic script generation based on parameters using `lookup()` maps
+2. **Parameters**: Individual `coder_parameter` resources with `type = "bool"` for multi-select stacks and plugins
+3. **Locals**: Dynamic script generation based on parameters using conditional concatenation
 4. **Volume**: `docker_volume` for persistent `/home/coder` storage
 5. **Agent**: `coder_agent` with startup_script containing initialization logic
 6. **Container**: `docker_container` that runs the agent init script
@@ -52,18 +52,19 @@ scripts/
 **Terraform Implementation:**
 ```hcl
 locals {
-  # Load scripts using file() function
-  stack_install = lookup({
-    "python-uv"  = file("${path.module}/scripts/stacks/python-uv.sh")
-    "python-pip" = file("${path.module}/scripts/stacks/python-pip.sh")
-    # ... other options
-  }, data.coder_parameter.stack.value, "default")
+  # Concatenate all selected stack scripts (multi-select via bool parameters)
+  stack_install = join("\n", compact([
+    data.coder_parameter.stack_python_uv.value == "true" ? file("${path.module}/scripts/stacks/python-uv.sh") : "",
+    data.coder_parameter.stack_python_pip.value == "true" ? file("${path.module}/scripts/stacks/python-pip.sh") : "",
+    data.coder_parameter.stack_go.value == "true" ? file("${path.module}/scripts/stacks/go.sh") : "",
+  ]))
 }
 ```
 
 Benefits of this approach:
 - Scripts are external files, not inline in Terraform
-- Easy to add new stacks/agents without modifying main.tf
+- Users can select multiple stacks and plugins simultaneously
+- Easy to add new stacks/agents by adding a bool parameter and conditional entry
 - Better readability and maintainability
 - Scripts can be tested independently
 - Clear separation of concerns between Terraform logic and installation logic
@@ -104,8 +105,8 @@ The `coder_agent.startup_script` executes in the container on startup. Critical 
 
 1. **Run common-deps.sh** - Installs sudo, creates coder user, installs shared dependencies (curl, wget, git, expect, Node.js 24, gh CLI)
 2. **Run base-ai-tools.sh** - Installs all 6 AI CLI tools in parallel (claude, opencode, relentless, codex, copilot, gemini)
-3. **Run stack script** - Installs selected development stack based on parameter
-4. **Run plugin script** - Installs selected AI plugin based on parameter (oh-my-claudecode/oh-my-opencode)
+3. **Run stack scripts** - Installs all selected development stacks (multiple can be enabled)
+4. **Run plugin scripts** - Installs all selected AI plugins (multiple can be enabled)
 5. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
 6. **Install code-server** - If not already present
 7. **Start code-server** - In background on port 13337
@@ -133,11 +134,11 @@ Container and volume names follow the pattern: `coder-{owner}-{workspace}` for c
 
 ## Supported Stacks and Agents
 
-### Development Stacks
-- **python-uv**: Python with uv package manager (default)
-- **python-pip**: Python with pip
-- **go**: Go language
-- **none**: No stack installed
+### Development Stacks (Multi-Select)
+Each stack is an individual boolean toggle parameter. Users can enable multiple stacks simultaneously:
+- **stack_python_uv**: Python with uv package manager (default: enabled)
+- **stack_python_pip**: Python with pip and venv (default: disabled)
+- **stack_go**: Go programming language (default: disabled)
 
 Note: Node.js 24 is now always available in the base image via common-deps.sh.
 
@@ -150,11 +151,10 @@ All 6 base AI CLI tools are automatically installed in every workspace:
 - **Copilot** (@github/copilot) - GitHub's AI pair programmer
 - **Gemini** (@google/gemini-cli) - Google's AI coding assistant
 
-### AI Plugins (Optional)
-Plugins enhance the base tools with additional features:
-- **oh-my-claudecode**: Enhances Claude Code with additional configuration
-- **oh-my-opencode**: Enhances OpenCode with additional features
-- **none**: No plugin (default)
+### AI Plugins (Multi-Select, Optional)
+Each plugin is an individual boolean toggle parameter. Users can enable multiple plugins simultaneously:
+- **plugin_oh_my_claudecode**: Enhances Claude Code with additional configuration (default: disabled)
+- **plugin_oh_my_opencode**: Enhances OpenCode with additional features (default: disabled)
 
 ## Extending the Template
 
@@ -172,18 +172,23 @@ To add a new development stack option:
    sudo apt-get install -y your-stack-package
    ```
 
-2. **Add parameter option** in `main.tf`:
+2. **Add a bool parameter** in `main.tf`:
    ```hcl
-   option {
-     name  = "Your Stack"
-     value = "your-stack"
-     icon  = "/icon/your-icon.svg"
+   data "coder_parameter" "stack_your_stack" {
+     name         = "stack_your_stack"
+     display_name = "Your Stack"
+     description  = "Install Your Stack"
+     icon         = "/icon/your-icon.svg"
+     type         = "bool"
+     default      = "false"
+     mutable      = false
+     order        = 4  # increment from last stack order
    }
    ```
 
-3. **Add to lookup** in the locals block:
+3. **Add conditional entry** in the `stack_install` local:
    ```hcl
-   "your-stack" = file("${path.module}/scripts/stacks/your-stack.sh")
+   data.coder_parameter.stack_your_stack.value == "true" ? file("${path.module}/scripts/stacks/your-stack.sh") : "",
    ```
 
 ### Adding a New AI Agent
@@ -209,9 +214,24 @@ To add a new AI plugin option (optional enhancement):
    sudo npm install -g your-plugin-package
    ```
 
-2. **Add parameter option** in `main.tf` under `data "coder_parameter" "ai_plugin"`
+2. **Add a bool parameter** in `main.tf`:
+   ```hcl
+   data "coder_parameter" "plugin_your_plugin" {
+     name         = "plugin_your_plugin"
+     display_name = "Your Plugin"
+     description  = "Install Your Plugin"
+     icon         = "/icon/your-icon.svg"
+     type         = "bool"
+     default      = "false"
+     mutable      = false
+     order        = 6  # increment from last plugin order
+   }
+   ```
 
-3. **Add to lookup** in the locals block under `ai_plugin_install`
+3. **Add conditional entry** in the `ai_plugin_install` local:
+   ```hcl
+   data.coder_parameter.plugin_your_plugin.value == "true" ? file("${path.module}/scripts/agents/your-plugin.sh") : "",
+   ```
 
 ### Script Writing Guidelines
 
@@ -259,7 +279,7 @@ When adding new `coder_parameter` options or `coder_app` resources:
 
 ### Parameter Mutability
 
-Template parameters use `mutable = false`, meaning they can only be set during workspace creation, not changed after deployment. This prevents runtime configuration drift.
+Template parameters use `mutable = false` with `type = "bool"`, meaning they can only be set during workspace creation, not changed after deployment. This prevents runtime configuration drift. Each stack and plugin is an individual boolean toggle, allowing users to select multiple options simultaneously.
 
 ### Container Count Pattern
 

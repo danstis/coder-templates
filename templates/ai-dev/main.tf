@@ -14,76 +14,76 @@ terraform {
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
-data "coder_parameter" "stack" {
-  name         = "stack"
-  display_name = "Development Stack"
-  description  = "Select the development stack to install"
-  default      = "python-uv"
-  type         = "string"
+# --- Development Stacks (order 1-3) ---
+data "coder_parameter" "stack_python_uv" {
+  name         = "stack_python_uv"
+  display_name = "Python (uv)"
+  description  = "Install Python with uv package manager"
+  icon         = "/icon/python.svg"
+  type         = "bool"
+  default      = "true"
   mutable      = false
-
-  option {
-    name  = "Python (uv)"
-    value = "python-uv"
-    icon  = "/icon/python.svg"
-  }
-  option {
-    name  = "Python (pip)"
-    value = "python-pip"
-    icon  = "/icon/python.svg"
-  }
-  option {
-    name  = "Go"
-    value = "go"
-    icon  = "/icon/go.svg"
-  }
-  option {
-    name  = "None"
-    value = "none"
-    icon  = "/icon/code.svg"
-  }
+  order        = 1
 }
 
-data "coder_parameter" "ai_plugin" {
-  name         = "ai_plugin"
-  display_name = "AI Agent Plugin"
-  description  = "Select optional AI agent plugin (oh-my-* tools that enhance base CLI tools)"
-  default      = "none"
-  type         = "string"
+data "coder_parameter" "stack_python_pip" {
+  name         = "stack_python_pip"
+  display_name = "Python (pip)"
+  description  = "Install Python with pip and venv"
+  icon         = "/icon/python.svg"
+  type         = "bool"
+  default      = "false"
   mutable      = false
+  order        = 2
+}
 
-  option {
-    name  = "None"
-    value = "none"
-    icon  = "/icon/code.svg"
-  }
-  option {
-    name  = "Oh-My-ClaudeCode"
-    value = "oh-my-claudecode"
-    icon  = "/icon/claude.svg"
-  }
-  option {
-    name  = "Oh-My-OpenCode"
-    value = "oh-my-opencode"
-    icon  = "/icon/opencode.svg"
-  }
+data "coder_parameter" "stack_go" {
+  name         = "stack_go"
+  display_name = "Go"
+  description  = "Install the Go programming language"
+  icon         = "/icon/go.svg"
+  type         = "bool"
+  default      = "false"
+  mutable      = false
+  order        = 3
+}
+
+# --- AI Plugins (order 4-5) ---
+data "coder_parameter" "plugin_oh_my_claudecode" {
+  name         = "plugin_oh_my_claudecode"
+  display_name = "Oh-My-ClaudeCode"
+  description  = "Install Oh-My-ClaudeCode plugin for Claude Code"
+  icon         = "/icon/claude.svg"
+  type         = "bool"
+  default      = "false"
+  mutable      = false
+  order        = 4
+}
+
+data "coder_parameter" "plugin_oh_my_opencode" {
+  name         = "plugin_oh_my_opencode"
+  display_name = "Oh-My-OpenCode"
+  description  = "Install Oh-My-OpenCode plugin for OpenCode"
+  icon         = "/icon/opencode.svg"
+  type         = "bool"
+  default      = "false"
+  mutable      = false
+  order        = 5
 }
 
 locals {
-  # Stack installation scripts from files (node removed - now in common-deps.sh)
-  stack_install = lookup({
-    "python-uv"  = file("${path.module}/scripts/stacks/python-uv.sh")
-    "python-pip" = file("${path.module}/scripts/stacks/python-pip.sh")
-    "go"         = file("${path.module}/scripts/stacks/go.sh")
-    "none"       = "echo 'No development stack selected'"
-  }, data.coder_parameter.stack.value, "echo 'Unknown stack'")
+  # Stack installation scripts - concatenate all selected stacks
+  stack_install = join("\n", compact([
+    data.coder_parameter.stack_python_uv.value == "true" ? file("${path.module}/scripts/stacks/python-uv.sh") : "",
+    data.coder_parameter.stack_python_pip.value == "true" ? file("${path.module}/scripts/stacks/python-pip.sh") : "",
+    data.coder_parameter.stack_go.value == "true" ? file("${path.module}/scripts/stacks/go.sh") : "",
+  ]))
 
-  # Plugin installation scripts (renamed from ai_agent_install)
-  ai_plugin_install = lookup({
-    "oh-my-claudecode" = file("${path.module}/scripts/agents/oh-my-claudecode.sh")
-    "oh-my-opencode"   = file("${path.module}/scripts/agents/oh-my-opencode.sh")
-    "none"             = "echo 'No AI plugin selected'"
-  }, data.coder_parameter.ai_plugin.value, "echo 'Unknown AI plugin'")
+  # Plugin installation scripts - concatenate all selected plugins
+  ai_plugin_install = join("\n", compact([
+    data.coder_parameter.plugin_oh_my_claudecode.value == "true" ? file("${path.module}/scripts/agents/oh-my-claudecode.sh") : "",
+    data.coder_parameter.plugin_oh_my_opencode.value == "true" ? file("${path.module}/scripts/agents/oh-my-opencode.sh") : "",
+  ]))
 
   # Common dependencies script
   common_deps = file("${path.module}/scripts/common-deps.sh")
@@ -92,7 +92,7 @@ locals {
   base_ai_tools = file("${path.module}/scripts/base-ai-tools.sh")
 
   # Determine if we need the oh-my-claudecode install script
-  include_oh_my_claudecode_script = data.coder_parameter.ai_plugin.value == "oh-my-claudecode"
+  include_oh_my_claudecode_script = data.coder_parameter.plugin_oh_my_claudecode.value == "true"
 }
 
 resource "docker_volume" "home_volume" {
