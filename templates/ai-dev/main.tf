@@ -181,7 +181,7 @@ resource "docker_container" "workspace" {
   hostname = data.coder_workspace.me.name
 
   # Bootstrap coder user and run agent as coder
-  command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && (id -u coder >/dev/null 2>&1 || useradd -m -s /bin/bash coder) && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && sudo -E -u coder sh -c '${coder_agent.main.init_script}'"]
+  command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && (id -u coder >/dev/null 2>&1 || useradd -m -s /bin/bash coder) && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && sudo -u coder CODER_AGENT_TOKEN=$CODER_AGENT_TOKEN sh -c '${coder_agent.main.init_script}'"]
 
   env = [
     "CODER_AGENT_TOKEN=${coder_agent.main.token}",
