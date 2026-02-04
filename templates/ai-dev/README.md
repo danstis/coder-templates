@@ -147,12 +147,14 @@ scripts/
 │   ├── python-pip.sh       # Python with pip
 │   ├── go.sh               # Go language
 │   └── node.sh             # Node.js 24.x
-└── agents/                 # AI agent installers
-    ├── claude.sh           # Claude Code
-    ├── opencode.sh         # OpenCode
-    ├── oh-my-claudecode.sh # Oh-My-ClaudeCode
-    ├── oh-my-opencode.sh   # Oh-My-OpenCode
-    └── relentless.sh       # Relentless
+├── agents/                 # AI agent installers
+│   ├── claude.sh           # Claude Code
+│   ├── opencode.sh         # OpenCode
+│   ├── oh-my-claudecode.sh # Oh-My-ClaudeCode
+│   ├── oh-my-opencode.sh   # Oh-My-OpenCode
+│   └── relentless.sh       # Relentless
+└── tools/                  # Optional tool installers
+    └── vibe-kanban.sh      # Vibe Kanban
 ```
 
 ### How Scripts Are Used
@@ -162,6 +164,7 @@ The `main.tf` file uses Terraform's `file()` function to load these scripts dyna
 1. **common-deps.sh** is always executed first to install shared dependencies
 2. **Stack scripts** are selected based on the `stack` parameter (python-uv, python-pip, go, node, or none)
 3. **Agent scripts** are selected based on the `ai_agent` parameter (claude, opencode, oh-my-claudecode, oh-my-opencode, relentless, or none)
+4. **Tool scripts** are selected based on the `optional_tool` parameter (vibe-kanban or none)
 
 This modular approach allows:
 - Easy addition of new stacks or agents by creating new scripts

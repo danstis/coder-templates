@@ -69,6 +69,26 @@ data "coder_parameter" "ai_plugin" {
   }
 }
 
+data "coder_parameter" "optional_tool" {
+  name         = "optional_tool"
+  display_name = "Optional Tool"
+  description  = "Select an optional productivity tool to install"
+  default      = "none"
+  type         = "string"
+  mutable      = false
+
+  option {
+    name  = "None"
+    value = "none"
+    icon  = "/icon/code.svg"
+  }
+  option {
+    name  = "Vibe Kanban"
+    value = "vibe-kanban"
+    icon  = "https://www.vibekanban.com/favicon.png"
+  }
+}
+
 locals {
   # Stack installation scripts from files (node removed - now in common-deps.sh)
   stack_install = lookup({
@@ -85,6 +105,12 @@ locals {
     "none"             = "echo 'No AI plugin selected'"
   }, data.coder_parameter.ai_plugin.value, "echo 'Unknown AI plugin'")
 
+  # Optional tool installation scripts
+  optional_tool_install = lookup({
+    "vibe-kanban" = file("${path.module}/scripts/tools/vibe-kanban.sh")
+    "none"        = "echo 'No optional tool selected'"
+  }, data.coder_parameter.optional_tool.value, "echo 'Unknown optional tool'")
+
   # Common dependencies script
   common_deps = file("${path.module}/scripts/common-deps.sh")
 
@@ -93,6 +119,9 @@ locals {
 
   # Determine if we need the oh-my-claudecode install script
   include_oh_my_claudecode_script = data.coder_parameter.ai_plugin.value == "oh-my-claudecode"
+
+  # Determine if vibe-kanban is selected
+  include_vibe_kanban = data.coder_parameter.optional_tool.value == "vibe-kanban"
 }
 
 resource "docker_volume" "home_volume" {
@@ -124,12 +153,22 @@ resource "coder_agent" "main" {
       ${local.ai_plugin_install}
     ) || echo "AI plugin installation completed with errors"
 
+    # Install selected optional tool
+    (
+      ${local.optional_tool_install}
+    ) || echo "Optional tool installation completed with errors"
+
     # Create oh-my-claudecode setup script if selected
     %{if local.include_oh_my_claudecode_script}
     cat <<'EOF' > /home/coder/install-oh-my-claudecode.sh
 ${file("${path.module}/scripts/install-oh-my-claudecode.sh")}
 EOF
     chmod +x /home/coder/install-oh-my-claudecode.sh
+    %{endif}
+
+    # Start Vibe Kanban web UI if selected
+    %{if local.include_vibe_kanban}
+    sudo -u coder env PORT=5173 vibe-kanban >/tmp/vibe-kanban.log 2>&1 &
     %{endif}
 
     # Install code-server
@@ -260,4 +299,32 @@ resource "coder_app" "gemini" {
   display_name = "Google Gemini"
   icon         = "/icon/gemini.svg"
   command      = "cd /home/coder && gemini"
+}
+
+# Vibe Kanban web UI - only when selected as optional tool
+resource "coder_app" "vibe_kanban" {
+  count        = local.include_vibe_kanban ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "vibe-kanban"
+  display_name = "Vibe Kanban"
+  url          = "http://127.0.0.1:5173"
+  icon         = "https://www.vibekanban.com/favicon.png"
+  subdomain    = true
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://127.0.0.1:5173"
+    interval  = 5
+    threshold = 12
+  }
+}
+
+# Vibe Kanban terminal CLI - only when selected as optional tool
+resource "coder_app" "vibe_kanban_cli" {
+  count        = local.include_vibe_kanban ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "vibe-kanban-cli"
+  display_name = "Vibe Kanban CLI"
+  icon         = "https://www.vibekanban.com/favicon.png"
+  command      = "cd /home/coder && vibe-kanban"
 }

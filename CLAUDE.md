@@ -44,9 +44,11 @@ scripts/
 │   ├── python-uv.sh
 │   ├── python-pip.sh
 │   └── go.sh
-└── agents/                 # AI plugin installers (optional enhancements)
-    ├── oh-my-claudecode.sh
-    └── oh-my-opencode.sh
+├── agents/                 # AI plugin installers (optional enhancements)
+│   ├── oh-my-claudecode.sh
+│   └── oh-my-opencode.sh
+└── tools/                  # Optional tool installers
+    └── vibe-kanban.sh
 ```
 
 **Terraform Implementation:**
@@ -106,9 +108,11 @@ The `coder_agent.startup_script` executes in the container on startup. Critical 
 2. **Run base-ai-tools.sh** - Installs all 6 AI CLI tools in parallel (claude, opencode, relentless, codex, copilot, gemini)
 3. **Run stack script** - Installs selected development stack based on parameter
 4. **Run plugin script** - Installs selected AI plugin based on parameter (oh-my-claudecode/oh-my-opencode)
-5. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
-6. **Install code-server** - If not already present
-7. **Start code-server** - In background on port 13337
+5. **Run optional tool script** - Installs selected optional tool based on parameter (vibe-kanban)
+6. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
+7. **Start Vibe Kanban web UI** (conditional) - Only if vibe-kanban is selected, on port 5173
+8. **Install code-server** - If not already present
+9. **Start code-server** - In background on port 13337
 
 Each installation step is wrapped in a subshell with `|| echo` for non-fatal error handling, allowing the container to start even if optional installations fail.
 
@@ -155,6 +159,11 @@ Plugins enhance the base tools with additional features:
 - **oh-my-claudecode**: Enhances Claude Code with additional configuration
 - **oh-my-opencode**: Enhances OpenCode with additional features
 - **none**: No plugin (default)
+
+### Optional Tools
+Additional productivity tools that can be installed in the workspace:
+- **vibe-kanban**: Kanban board for project management (installed via `npm install -g vibe-kanban`). Includes a web UI accessible as a Coder app on port 5173, plus a terminal CLI app.
+- **none**: No optional tool (default)
 
 ## Extending the Template
 
@@ -213,6 +222,34 @@ To add a new AI plugin option (optional enhancement):
 
 3. **Add to lookup** in the locals block under `ai_plugin_install`
 
+### Adding a New Optional Tool
+
+To add a new optional tool:
+
+1. **Create the installation script** at `scripts/tools/your-tool.sh`:
+   ```bash
+   #!/bin/bash
+   # your-tool.sh - Install Your Tool
+   # Requires: Node.js and npm (from common-deps.sh)
+   set -e
+
+   sudo npm install -g your-tool-package
+   ```
+
+2. **Add parameter option** in `main.tf` under `data "coder_parameter" "optional_tool"`:
+   ```hcl
+   option {
+     name  = "Your Tool"
+     value = "your-tool"
+     icon  = "/icon/your-icon.svg"
+   }
+   ```
+
+3. **Add to lookup** in the locals block under `optional_tool_install`:
+   ```hcl
+   "your-tool" = file("${path.module}/scripts/tools/your-tool.sh")
+   ```
+
 ### Script Writing Guidelines
 
 - All scripts require `#!/bin/bash` shebang
@@ -243,6 +280,8 @@ Coder provides 137+ built-in icons at `/icon/`. Always prefer these over custom 
 | GitHub | `/icon/github.svg` | Copilot |
 | Gemini | `/icon/gemini.svg` | Gemini CLI |
 | Terminal | `/icon/terminal.svg` | Generic CLI tools (fallback) |
+| Task | `/icon/task.svg` | Project management tools (fallback) |
+| Vibe Kanban | `https://www.vibekanban.com/favicon.png` | Vibe Kanban |
 
 **Browse all available icons:** https://github.com/coder/coder/tree/main/site/static/icon
 
@@ -275,6 +314,10 @@ The `count` ensures containers are only created when the workspace is started (n
 ### Code-Server Port
 
 Hardcoded to port 13337 in both startup script and `coder_app` URL. Must be changed in both locations if modified.
+
+### Vibe Kanban Port
+
+When selected, Vibe Kanban runs on port 5173 (set via `PORT` env var in the startup script and referenced in the `coder_app` URL). Must be changed in both locations if modified.
 
 ## Monitoring
 
