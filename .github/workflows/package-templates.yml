@@ -88,15 +88,9 @@ jobs:
           tag_name: ${{ steps.prerelease_version.outputs.tag }}
           name: Pre-release ${{ steps.prerelease_version.outputs.tag }}
           body: |
-            ## Pre-release from PR #${{ github.event.pull_request.number }}
-            
-            **Branch:** ${{ github.head_ref }}
-            **PR Title:** ${{ github.event.pull_request.title }}
-            
+            ## Pre-release from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}
+
             This is an automated pre-release for testing. Do not use in production.
-            
-            ### Changes
-            ${{ github.event.pull_request.body }}
           files: dist/*.zip
           prerelease: true
           target_commitish: ${{ github.event.pull_request.head.sha }}
