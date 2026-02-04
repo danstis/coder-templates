@@ -280,7 +280,8 @@ Coder provides 137+ built-in icons at `/icon/`. Always prefer these over custom 
 | GitHub | `/icon/github.svg` | Copilot |
 | Gemini | `/icon/gemini.svg` | Gemini CLI |
 | Terminal | `/icon/terminal.svg` | Generic CLI tools (fallback) |
-| Task | `/icon/task.svg` | Vibe Kanban, project management tools |
+| Task | `/icon/task.svg` | Project management tools (fallback) |
+| Vibe Kanban | `https://www.vibekanban.com/favicon.png` | Vibe Kanban |
 
 **Browse all available icons:** https://github.com/coder/coder/tree/main/site/static/icon
 

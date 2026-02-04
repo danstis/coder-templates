@@ -85,7 +85,7 @@ data "coder_parameter" "optional_tool" {
   option {
     name  = "Vibe Kanban"
     value = "vibe-kanban"
-    icon  = "/icon/task.svg"
+    icon  = "https://www.vibekanban.com/favicon.png"
   }
 }
 
@@ -309,7 +309,7 @@ resource "coder_app" "vibe_kanban" {
   slug         = "vibe-kanban"
   display_name = "Vibe Kanban"
   url          = "http://127.0.0.1:5173"
-  icon         = "/icon/task.svg"
+  icon         = "https://www.vibekanban.com/favicon.png"
   subdomain    = false
   share        = "owner"
 
@@ -326,6 +326,6 @@ resource "coder_app" "vibe_kanban_cli" {
   agent_id     = coder_agent.main.id
   slug         = "vibe-kanban-cli"
   display_name = "Vibe Kanban CLI"
-  icon         = "/icon/terminal.svg"
+  icon         = "https://www.vibekanban.com/favicon.png"
   command      = "cd /home/coder && vibe-kanban"
 }
