@@ -130,7 +130,6 @@ resource "coder_agent" "main" {
 ${file("${path.module}/scripts/install-oh-my-claudecode.sh")}
 EOF
     chmod +x /home/coder/install-oh-my-claudecode.sh
-    chown coder:coder /home/coder/install-oh-my-claudecode.sh
     %{endif}
 
     # Install code-server
@@ -138,8 +137,8 @@ EOF
       curl -fsSL https://code-server.dev/install.sh | sh
     fi
 
-    # Start code-server as coder user
-    sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
+    # Start code-server
+    code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
   EOT
 
   env = {
@@ -181,8 +180,8 @@ resource "docker_container" "workspace" {
 
   hostname = data.coder_workspace.me.name
 
-  # Install curl first (required for agent init script), then run Coder agent
-  command = ["sh", "-c", "apt-get update && apt-get install -y curl && ${coder_agent.main.init_script}"]
+  # Bootstrap coder user and run agent as coder
+  command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && useradd -m -s /bin/bash coder && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && sudo -E -u coder sh -c '${coder_agent.main.init_script}'"]
 
   env = [
     "CODER_AGENT_TOKEN=${coder_agent.main.token}",
