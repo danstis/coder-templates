@@ -25,7 +25,7 @@ A Docker-based universal AI agentic coding workspace with all major CLI tools pr
 - **Base AI Tools** (always installed): Claude Code, OpenCode, Relentless, OpenAI Codex, GitHub Copilot, Google Gemini
 - Choice of development stacks: Python (uv/pip), Go
 - Optional AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode
-- Optional tools: Vibe Kanban
+- Optional tools: Vibe Kanban (with web UI)
 - Node.js 24 and GitHub CLI included in base
 - Pre-configured Git author/committer from Coder profile
 - Real-time resource monitoring (CPU, RAM, disk)

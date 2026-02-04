@@ -119,6 +119,9 @@ locals {
 
   # Determine if we need the oh-my-claudecode install script
   include_oh_my_claudecode_script = data.coder_parameter.ai_plugin.value == "oh-my-claudecode"
+
+  # Determine if vibe-kanban is selected
+  include_vibe_kanban = data.coder_parameter.optional_tool.value == "vibe-kanban"
 }
 
 resource "docker_volume" "home_volume" {
@@ -162,6 +165,11 @@ ${file("${path.module}/scripts/install-oh-my-claudecode.sh")}
 EOF
     chmod +x /home/coder/install-oh-my-claudecode.sh
     chown coder:coder /home/coder/install-oh-my-claudecode.sh
+    %{endif}
+
+    # Start Vibe Kanban web UI if selected
+    %{if local.include_vibe_kanban}
+    sudo -u coder bash -c 'HOST=0.0.0.0 PORT=5173 vibe-kanban' >/tmp/vibe-kanban.log 2>&1 &
     %{endif}
 
     # Install code-server
@@ -292,4 +300,22 @@ resource "coder_app" "gemini" {
   display_name = "Google Gemini"
   icon         = "/icon/gemini.svg"
   command      = "cd /home/coder && gemini"
+}
+
+# Vibe Kanban app - only when selected as optional tool
+resource "coder_app" "vibe_kanban" {
+  count        = local.include_vibe_kanban ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "vibe-kanban"
+  display_name = "Vibe Kanban"
+  url          = "http://localhost:5173"
+  icon         = "/icon/task.svg"
+  subdomain    = false
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://localhost:5173"
+    interval  = 5
+    threshold = 12
+  }
 }

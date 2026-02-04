@@ -110,8 +110,9 @@ The `coder_agent.startup_script` executes in the container on startup. Critical 
 4. **Run plugin script** - Installs selected AI plugin based on parameter (oh-my-claudecode/oh-my-opencode)
 5. **Run optional tool script** - Installs selected optional tool based on parameter (vibe-kanban)
 6. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
-7. **Install code-server** - If not already present
-8. **Start code-server** - In background on port 13337
+7. **Start Vibe Kanban web UI** (conditional) - Only if vibe-kanban is selected, on port 5173
+8. **Install code-server** - If not already present
+9. **Start code-server** - In background on port 13337
 
 Each installation step is wrapped in a subshell with `|| echo` for non-fatal error handling, allowing the container to start even if optional installations fail.
 
@@ -161,7 +162,7 @@ Plugins enhance the base tools with additional features:
 
 ### Optional Tools
 Additional productivity tools that can be installed in the workspace:
-- **vibe-kanban**: Kanban board for project management (installed via `npm install -g vibe-kanban`)
+- **vibe-kanban**: Kanban board for project management (installed via `npm install -g vibe-kanban`). Includes a web UI accessible as a Coder app on port 5173.
 - **none**: No optional tool (default)
 
 ## Extending the Template
