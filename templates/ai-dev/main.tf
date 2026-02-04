@@ -310,7 +310,7 @@ resource "coder_app" "vibe_kanban" {
   display_name = "Vibe Kanban"
   url          = "http://127.0.0.1:5173"
   icon         = "https://www.vibekanban.com/favicon.png"
-  subdomain    = false
+  subdomain    = true
   share        = "owner"
 
   healthcheck {
