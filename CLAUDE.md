@@ -162,7 +162,7 @@ Plugins enhance the base tools with additional features:
 
 ### Optional Tools
 Additional productivity tools that can be installed in the workspace:
-- **vibe-kanban**: Kanban board for project management (installed via `npm install -g vibe-kanban`). Includes a web UI accessible as a Coder app on port 5173.
+- **vibe-kanban**: Kanban board for project management (installed via `npm install -g vibe-kanban`). Includes a web UI accessible as a Coder app on port 5173, plus a terminal CLI app.
 - **none**: No optional tool (default)
 
 ## Extending the Template
@@ -280,6 +280,7 @@ Coder provides 137+ built-in icons at `/icon/`. Always prefer these over custom 
 | GitHub | `/icon/github.svg` | Copilot |
 | Gemini | `/icon/gemini.svg` | Gemini CLI |
 | Terminal | `/icon/terminal.svg` | Generic CLI tools (fallback) |
+| Task | `/icon/task.svg` | Vibe Kanban, project management tools |
 
 **Browse all available icons:** https://github.com/coder/coder/tree/main/site/static/icon
 
@@ -312,6 +313,10 @@ The `count` ensures containers are only created when the workspace is started (n
 ### Code-Server Port
 
 Hardcoded to port 13337 in both startup script and `coder_app` URL. Must be changed in both locations if modified.
+
+### Vibe Kanban Port
+
+When selected, Vibe Kanban runs on port 5173 (set via `PORT` env var in the startup script and referenced in the `coder_app` URL). Must be changed in both locations if modified.
 
 ## Monitoring
 

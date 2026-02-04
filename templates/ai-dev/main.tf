@@ -169,7 +169,7 @@ EOF
 
     # Start Vibe Kanban web UI if selected
     %{if local.include_vibe_kanban}
-    sudo -u coder bash -c 'HOST=0.0.0.0 PORT=5173 vibe-kanban' >/tmp/vibe-kanban.log 2>&1 &
+    sudo -u coder env PORT=5173 vibe-kanban >/tmp/vibe-kanban.log 2>&1 &
     %{endif}
 
     # Install code-server
@@ -302,20 +302,30 @@ resource "coder_app" "gemini" {
   command      = "cd /home/coder && gemini"
 }
 
-# Vibe Kanban app - only when selected as optional tool
+# Vibe Kanban web UI - only when selected as optional tool
 resource "coder_app" "vibe_kanban" {
   count        = local.include_vibe_kanban ? 1 : 0
   agent_id     = coder_agent.main.id
   slug         = "vibe-kanban"
   display_name = "Vibe Kanban"
-  url          = "http://localhost:5173"
+  url          = "http://127.0.0.1:5173"
   icon         = "/icon/task.svg"
   subdomain    = false
   share        = "owner"
 
   healthcheck {
-    url       = "http://localhost:5173"
+    url       = "http://127.0.0.1:5173"
     interval  = 5
     threshold = 12
   }
+}
+
+# Vibe Kanban terminal CLI - only when selected as optional tool
+resource "coder_app" "vibe_kanban_cli" {
+  count        = local.include_vibe_kanban ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "vibe-kanban-cli"
+  display_name = "Vibe Kanban CLI"
+  icon         = "/icon/terminal.svg"
+  command      = "cd /home/coder && vibe-kanban"
 }
