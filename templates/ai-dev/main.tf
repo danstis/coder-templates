@@ -69,6 +69,26 @@ data "coder_parameter" "ai_plugin" {
   }
 }
 
+data "coder_parameter" "optional_tool" {
+  name         = "optional_tool"
+  display_name = "Optional Tool"
+  description  = "Select an optional productivity tool to install"
+  default      = "none"
+  type         = "string"
+  mutable      = false
+
+  option {
+    name  = "None"
+    value = "none"
+    icon  = "/icon/code.svg"
+  }
+  option {
+    name  = "Vibe Kanban"
+    value = "vibe-kanban"
+    icon  = "/icon/task.svg"
+  }
+}
+
 locals {
   # Stack installation scripts from files (node removed - now in common-deps.sh)
   stack_install = lookup({
@@ -84,6 +104,12 @@ locals {
     "oh-my-opencode"   = file("${path.module}/scripts/agents/oh-my-opencode.sh")
     "none"             = "echo 'No AI plugin selected'"
   }, data.coder_parameter.ai_plugin.value, "echo 'Unknown AI plugin'")
+
+  # Optional tool installation scripts
+  optional_tool_install = lookup({
+    "vibe-kanban" = file("${path.module}/scripts/tools/vibe-kanban.sh")
+    "none"        = "echo 'No optional tool selected'"
+  }, data.coder_parameter.optional_tool.value, "echo 'Unknown optional tool'")
 
   # Common dependencies script
   common_deps = file("${path.module}/scripts/common-deps.sh")
@@ -123,6 +149,11 @@ resource "coder_agent" "main" {
     (
       ${local.ai_plugin_install}
     ) || echo "AI plugin installation completed with errors"
+
+    # Install selected optional tool
+    (
+      ${local.optional_tool_install}
+    ) || echo "Optional tool installation completed with errors"
 
     # Create oh-my-claudecode setup script if selected
     %{if local.include_oh_my_claudecode_script}

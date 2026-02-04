@@ -44,9 +44,11 @@ scripts/
 │   ├── python-uv.sh
 │   ├── python-pip.sh
 │   └── go.sh
-└── agents/                 # AI plugin installers (optional enhancements)
-    ├── oh-my-claudecode.sh
-    └── oh-my-opencode.sh
+├── agents/                 # AI plugin installers (optional enhancements)
+│   ├── oh-my-claudecode.sh
+│   └── oh-my-opencode.sh
+└── tools/                  # Optional tool installers
+    └── vibe-kanban.sh
 ```
 
 **Terraform Implementation:**
@@ -106,9 +108,10 @@ The `coder_agent.startup_script` executes in the container on startup. Critical 
 2. **Run base-ai-tools.sh** - Installs all 6 AI CLI tools in parallel (claude, opencode, relentless, codex, copilot, gemini)
 3. **Run stack script** - Installs selected development stack based on parameter
 4. **Run plugin script** - Installs selected AI plugin based on parameter (oh-my-claudecode/oh-my-opencode)
-5. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
-6. **Install code-server** - If not already present
-7. **Start code-server** - In background on port 13337
+5. **Run optional tool script** - Installs selected optional tool based on parameter (vibe-kanban)
+6. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
+7. **Install code-server** - If not already present
+8. **Start code-server** - In background on port 13337
 
 Each installation step is wrapped in a subshell with `|| echo` for non-fatal error handling, allowing the container to start even if optional installations fail.
 
@@ -155,6 +158,11 @@ Plugins enhance the base tools with additional features:
 - **oh-my-claudecode**: Enhances Claude Code with additional configuration
 - **oh-my-opencode**: Enhances OpenCode with additional features
 - **none**: No plugin (default)
+
+### Optional Tools
+Additional productivity tools that can be installed in the workspace:
+- **vibe-kanban**: Kanban board for project management (installed via `npm install -g vibe-kanban`)
+- **none**: No optional tool (default)
 
 ## Extending the Template
 
@@ -212,6 +220,34 @@ To add a new AI plugin option (optional enhancement):
 2. **Add parameter option** in `main.tf` under `data "coder_parameter" "ai_plugin"`
 
 3. **Add to lookup** in the locals block under `ai_plugin_install`
+
+### Adding a New Optional Tool
+
+To add a new optional tool:
+
+1. **Create the installation script** at `scripts/tools/your-tool.sh`:
+   ```bash
+   #!/bin/bash
+   # your-tool.sh - Install Your Tool
+   # Requires: Node.js and npm (from common-deps.sh)
+   set -e
+
+   sudo npm install -g your-tool-package
+   ```
+
+2. **Add parameter option** in `main.tf` under `data "coder_parameter" "optional_tool"`:
+   ```hcl
+   option {
+     name  = "Your Tool"
+     value = "your-tool"
+     icon  = "/icon/your-icon.svg"
+   }
+   ```
+
+3. **Add to lookup** in the locals block under `optional_tool_install`:
+   ```hcl
+   "your-tool" = file("${path.module}/scripts/tools/your-tool.sh")
+   ```
 
 ### Script Writing Guidelines
 
