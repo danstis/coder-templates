@@ -1,23 +1,28 @@
 #!/bin/bash
 # common-deps.sh - Install shared dependencies for all workspace configurations
-# This script runs as root inside the Docker container during agent startup.
+# This script runs during agent startup.
 set -e
 
-# Install sudo (needed for user management)
-apt-get update && apt-get install -y sudo
-
-# Create coder user if it doesn't exist
-if ! id -u coder &>/dev/null; then
-  useradd -m -s /bin/bash coder
-  usermod -aG sudo coder
-  echo "coder ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/coder
+# Ensure we have sudo access (bootstrap should have installed it)
+if ! command -v sudo &> /dev/null; then
+  echo "Error: sudo is required but not installed."
+  exit 1
 fi
 
-# Ensure home directory is owned by coder user (fix for Docker volume permissions)
-chown -R coder:coder /home/coder
+# Create coder user if it doesn't exist (idempotent)
+if ! id -u coder &>/dev/null; then
+  sudo useradd -m -s /bin/bash coder
+  sudo usermod -aG sudo coder
+  echo "coder ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/coder
+fi
+
+# Ensure home directory is owned by coder user
+# Use sudo to ensure we have permissions to chown if needed
+sudo chown -R coder:coder /home/coder
 
 # Install essential packages (nodejs/npm excluded - installed via nodesource below)
-apt-get install -y curl wget git expect unzip
+sudo apt-get update
+sudo apt-get install -y curl wget git expect unzip
 
 # GitHub CLI
 curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
