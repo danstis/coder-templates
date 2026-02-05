@@ -114,13 +114,15 @@ resource "coder_agent" "main" {
       ${local.base_ai_tools}
     ) || echo "Base AI tools installation completed with errors"
 
-    # Install selected development stack
+    # Install selected development stacks (no-op if none selected)
     (
+      true
       ${local.stack_install}
     ) || echo "Stack installation completed with errors"
 
-    # Install selected AI plugin
+    # Install selected AI plugins (no-op if none selected)
     (
+      true
       ${local.ai_plugin_install}
     ) || echo "AI plugin installation completed with errors"
 
