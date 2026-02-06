@@ -93,6 +93,9 @@ locals {
 
   # Determine if we need the oh-my-claudecode install script
   include_oh_my_claudecode_script = data.coder_parameter.plugin_oh_my_claudecode.value == "true"
+
+  # Determine if we need the oh-my-opencode wrapper script
+  include_oh_my_opencode_wrapper = data.coder_parameter.plugin_oh_my_opencode.value == "true"
 }
 
 resource "docker_volume" "home_volume" {
@@ -132,6 +135,14 @@ resource "coder_agent" "main" {
 ${file("${path.module}/scripts/install-oh-my-claudecode.sh")}
 EOF
     chmod +x /home/coder/install-oh-my-claudecode.sh
+    %{endif}
+
+    # Create oh-my-opencode wrapper script if plugin selected
+    %{if local.include_oh_my_opencode_wrapper}
+    cat <<'EOF' > /home/coder/opencode-wrapper.sh
+${file("${path.module}/scripts/agents/opencode-wrapper.sh")}
+EOF
+    chmod +x /home/coder/opencode-wrapper.sh
     %{endif}
 
     # Install code-server
@@ -228,12 +239,13 @@ resource "coder_app" "claude_code" {
 }
 
 # OpenCode app - always available (base AI tool)
+# Uses wrapper script for first-run oh-my-opencode setup if plugin is enabled
 resource "coder_app" "opencode" {
   agent_id     = coder_agent.main.id
   slug         = "opencode"
   display_name = "OpenCode"
   icon         = "/icon/opencode.svg"
-  command      = "cd /home/coder && opencode"
+  command      = local.include_oh_my_opencode_wrapper ? "cd /home/coder && ./opencode-wrapper.sh" : "cd /home/coder && opencode"
 }
 
 
