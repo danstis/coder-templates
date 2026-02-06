@@ -24,7 +24,7 @@ A Docker-based universal AI agentic coding workspace with all major CLI tools pr
 - Persistent home directory storage
 - **Base AI Tools** (always installed): Claude Code, OpenCode, Relentless, OpenAI Codex, GitHub Copilot, Google Gemini
 - Multi-select development stacks: Python (uv), Python (pip), Go — enable any combination
-- Multi-select AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode — enable any combination
+- Multi-select AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode, Agent OS — enable any combination
 - Node.js 24 and GitHub CLI included in base
 - Pre-configured Git author/committer from Coder profile
 - Real-time resource monitoring (CPU, RAM, disk)
@@ -310,7 +310,8 @@ coder-templates/
 │       │   │   └── go.sh
 │       │   └── agents/            # AI plugin installers
 │       │       ├── oh-my-claudecode.sh
-│       │       └── oh-my-opencode.sh
+│       │       ├── oh-my-opencode.sh
+│       │       └── agent-os.sh
 ├── CLAUDE.md                      # AI assistant guidance
 └── README.md                      # This file
 ```

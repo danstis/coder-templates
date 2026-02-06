@@ -48,7 +48,7 @@ data "coder_parameter" "stack_go" {
   order        = 3
 }
 
-# --- AI Plugins (order 4-5) ---
+# --- AI Plugins (order 4-6) ---
 data "coder_parameter" "plugin_oh_my_claudecode" {
   name         = "plugin_oh_my_claudecode"
   display_name = "Oh-My-ClaudeCode"
@@ -71,6 +71,17 @@ data "coder_parameter" "plugin_oh_my_opencode" {
   order        = 5
 }
 
+data "coder_parameter" "plugin_agent_os" {
+  name         = "plugin_agent_os"
+  display_name = "Agent OS"
+  description  = "Install Agent OS standards system for keeping AI agents aligned with project conventions"
+  icon         = "/icon/terminal.svg"
+  type         = "bool"
+  default      = "false"
+  mutable      = false
+  order        = 6
+}
+
 locals {
   # Stack installation scripts - concatenate all selected stacks
   stack_install = join("\n", compact([
@@ -83,6 +94,7 @@ locals {
   ai_plugin_install = join("\n", compact([
     data.coder_parameter.plugin_oh_my_claudecode.value == "true" ? file("${path.module}/scripts/agents/oh-my-claudecode.sh") : "",
     data.coder_parameter.plugin_oh_my_opencode.value == "true" ? file("${path.module}/scripts/agents/oh-my-opencode.sh") : "",
+    data.coder_parameter.plugin_agent_os.value == "true" ? file("${path.module}/scripts/agents/agent-os.sh") : "",
   ]))
 
   # Common dependencies script
