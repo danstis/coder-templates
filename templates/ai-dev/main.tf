@@ -271,10 +271,9 @@ resource "coder_script" "code_server" {
   display_name = "code-server"
   icon         = "/icon/code.svg"
   run_on_start = true
-  # Run code-server in the background so the startup script can complete.
-  # Using exec would replace the shell process and block completion, causing
-  # the workspace to remain in the 'building' state indefinitely.
-  # We use nohup to ensure the process survives the shell exit.
+  # Run code-server in the background via nohup so the startup script can complete.
+  # This allows the workspace to transition to the 'Running' state.
+  # The process is orphaned to PID 1 but retains access to all mounts in the container namespace.
   script = <<-EOT
     #!/bin/bash
     set -e
