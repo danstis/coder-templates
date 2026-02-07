@@ -23,9 +23,9 @@ Templates use two key providers:
 The `ai-dev` template follows this resource hierarchy:
 
 1. **Data Sources**: `coder_workspace`, `coder_workspace_owner` provide workspace context
-2. **Parameters**: Individual `coder_parameter` resources with `type = "bool"` for multi-select stacks and plugins
+2. **Parameters**: Individual `coder_parameter` resources with `type = "bool"` for multi-select stacks, plugins, and persistent mounts
 3. **Locals**: Dynamic script generation based on parameters using conditional concatenation
-4. **Volume**: `docker_volume` for persistent `/home/coder` storage
+4. **Volumes**: `docker_volume` for per-workspace `/home/coder` storage, plus conditional per-user persistent volumes
 5. **Agent**: `coder_agent` with startup_script containing initialization logic
 6. **Container**: `docker_container` that runs the agent init script
 7. **Apps**: `coder_app` resources exposing web services (code-server)
@@ -37,14 +37,15 @@ The template uses modular installation scripts loaded via Terraform's `file()` f
 **Scripts Directory:**
 ```
 scripts/
-├── common-deps.sh          # Shared dependencies (Node 24, gh CLI, always executed)
-├── base-ai-tools.sh        # All 6 base AI CLI tools (parallel installation)
+├── common-deps.sh                      # Shared dependencies (Node 24, gh CLI, always executed)
+├── base-ai-tools.sh                    # All 6 base AI CLI tools (parallel installation)
 ├── install-oh-my-claudecode.sh
-├── stacks/                 # Development stack installers
+├── fix-persistent-mount-permissions.sh  # Per-user volume ownership/permission fixes
+├── stacks/                              # Development stack installers
 │   ├── python-uv.sh
 │   ├── python-pip.sh
 │   └── go.sh
-└── agents/                 # AI plugin installers (optional enhancements)
+└── agents/                              # AI plugin installers (optional enhancements)
     ├── oh-my-claudecode.sh
     └── oh-my-opencode.sh
 ```
@@ -103,13 +104,14 @@ coder templates push ai-dev -d templates/ai-dev
 
 The `coder_agent.startup_script` executes in the container on startup. Critical ordering:
 
-1. **Run common-deps.sh** - Installs sudo, creates coder user, installs shared dependencies (curl, wget, git, expect, Node.js 24, gh CLI)
-2. **Run base-ai-tools.sh** - Installs all 6 AI CLI tools in parallel (claude, opencode, relentless, codex, copilot, gemini)
-3. **Run stack scripts** - Installs all selected development stacks (multiple can be enabled)
-4. **Run plugin scripts** - Installs all selected AI plugins (multiple can be enabled)
-5. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
-6. **Install code-server** - If not already present
-7. **Start code-server** - In background on port 13337
+1. **Fix persistent mount permissions** - Ensures per-user volumes are owned by `coder:coder` with correct SSH permissions
+2. **Run common-deps.sh** - Installs sudo, creates coder user, installs shared dependencies (curl, wget, git, expect, Node.js 24, gh CLI)
+3. **Run base-ai-tools.sh** - Installs all 6 AI CLI tools in parallel (claude, opencode, relentless, codex, copilot, gemini)
+4. **Run stack scripts** - Installs all selected development stacks (multiple can be enabled)
+5. **Run plugin scripts** - Installs all selected AI plugins (multiple can be enabled)
+6. **Create oh-my-claudecode setup script** (conditional) - Only if oh-my-claudecode is selected
+7. **Install code-server** - If not already present
+8. **Start code-server** - In background on port 13337
 
 Each installation step is wrapped in a subshell with `|| echo` for non-fatal error handling, allowing the container to start even if optional installations fail.
 
@@ -155,6 +157,28 @@ All 6 base AI CLI tools are automatically installed in every workspace:
 Each plugin is an individual boolean toggle parameter. Users can enable multiple plugins simultaneously:
 - **plugin_oh_my_claudecode**: Enhances Claude Code with additional configuration (default: disabled)
 - **plugin_oh_my_opencode**: Enhances OpenCode with additional features (default: disabled)
+
+### Persistent Mounts (Per-User, Mutable)
+
+Per-user persistent volumes that survive workspace rebuilds and are shared across all workspaces owned by the same user. These use `mutable = true` so they can be toggled after workspace creation.
+
+**Toggle Parameters (order 10-13):**
+
+- **persist_vscode**: Persist VS Code Server extensions and settings at `~/.vscode-server` (default: enabled)
+- **persist_cli_config**: Persist CLI tool configuration at `~/.config` (default: enabled)
+- **persist_ssh**: Persist SSH keys and configuration at `~/.ssh` (default: enabled)
+- **persist_repos**: Persist code repositories at `~/github.com` and `~/dev.azure.com` (default: enabled)
+
+**Auto-Tied Plugin Mounts (no separate toggle):**
+
+When oh-my-* plugins are enabled, their config directories get separate per-user volumes automatically to keep plugin-modified configs isolated from regular workspaces:
+
+- **Oh-My-ClaudeCode** → `~/.claude` mounted as `coder-{owner}-claude-omc`
+- **Oh-My-OpenCode** → `~/.config/opencode` mounted as `coder-{owner}-opencode-omc`
+
+**Volume Naming:** Per-user volumes use the pattern `coder-{owner_name}-{mount_name}` (vs per-workspace `coder-{workspace_id}-home`).
+
+**Permissions:** The `fix-persistent-mount-permissions.sh` script runs at startup to `chown` mount points to `coder:coder` and set correct SSH file permissions.
 
 ## Extending the Template
 
@@ -279,7 +303,9 @@ When adding new `coder_parameter` options or `coder_app` resources:
 
 ### Parameter Mutability
 
-Template parameters use `mutable = false` with `type = "bool"`, meaning they can only be set during workspace creation, not changed after deployment. This prevents runtime configuration drift. Each stack and plugin is an individual boolean toggle, allowing users to select multiple options simultaneously.
+Stack and plugin parameters use `mutable = false` with `type = "bool"`, meaning they can only be set during workspace creation. This prevents runtime configuration drift.
+
+Persistent mount parameters use `mutable = true`, allowing users to toggle persistence on/off from workspace settings after creation. Changing these triggers a workspace rebuild since the container definition changes.
 
 ### Container Count Pattern
 

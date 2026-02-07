@@ -22,9 +22,10 @@ A Docker-based universal AI agentic coding workspace with all major CLI tools pr
 - Ubuntu 24.04 LTS base image
 - code-server (VS Code in the browser) on port 13337
 - Persistent home directory storage
+- **Per-user persistent mounts** (mutable, shared across workspaces): VS Code settings, CLI config, SSH keys, code repos
 - **Base AI Tools** (always installed): Claude Code, OpenCode, Relentless, OpenAI Codex, GitHub Copilot, Google Gemini
 - Multi-select development stacks: Python (uv), Python (pip), Go — enable any combination
-- Multi-select AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode — enable any combination
+- Multi-select AI plugins: Oh-My-ClaudeCode, Oh-My-OpenCode — enable any combination (with auto-isolated config volumes)
 - Node.js 24 and GitHub CLI included in base
 - Pre-configured Git author/committer from Coder profile
 - Real-time resource monitoring (CPU, RAM, disk)
@@ -304,6 +305,7 @@ coder-templates/
 │       │   ├── common-deps.sh     # Shared dependencies (Node 24, gh CLI)
 │       │   ├── base-ai-tools.sh   # All 6 base AI CLI tools
 │       │   ├── install-oh-my-claudecode.sh
+│       │   ├── fix-persistent-mount-permissions.sh  # Per-user volume permissions
 │       │   ├── stacks/            # Development stack installers
 │       │   │   ├── python-uv.sh
 │       │   │   ├── python-pip.sh

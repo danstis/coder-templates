@@ -44,11 +44,11 @@ if ! command -v bun >/dev/null 2>&1; then
   if ! command -v unzip >/dev/null 2>&1; then
     apt-get update && apt-get install -y unzip
   fi
-  
+
   # Run installer with BUN_INSTALL set to /usr/local
   # This avoids the 404 error caused by incorrect flag usage
   curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash || true
-  
+
   # Ensure it's symlinked to /usr/bin for scripts using #!/usr/bin/env bun
   if [ -x /usr/local/bin/bun ] && [ ! -x /usr/bin/bun ]; then
     ln -sf /usr/local/bin/bun /usr/bin/bun || true
@@ -58,4 +58,12 @@ fi
 # Final check: if bun still isn't available, print a warning (non-fatal)
 if ! command -v bun >/dev/null 2>&1; then
   echo "⚠ bun not found after install attempts - relentless may fail until bun is available"
+fi
+
+# Install code-server
+# We install it here to avoid apt lock conflicts with other startup scripts.
+# The startup logic remains in the coder_button/script to ensure volume visibility.
+if ! command -v code-server >/dev/null 2>&1; then
+  echo "Installing code-server..."
+  curl -fsSL https://code-server.dev/install.sh | sh
 fi

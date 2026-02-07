@@ -48,7 +48,7 @@ data "coder_parameter" "stack_go" {
   order        = 3
 }
 
-# --- AI Plugins (order 4-5) ---
+# --- AI Plugins (order 4-5, immutable) ---
 data "coder_parameter" "plugin_oh_my_claudecode" {
   name         = "plugin_oh_my_claudecode"
   display_name = "Oh-My-ClaudeCode"
@@ -71,6 +71,51 @@ data "coder_parameter" "plugin_oh_my_opencode" {
   order        = 5
 }
 
+# --- Persistent Mounts (order 10-13, mutable) ---
+data "coder_parameter" "persist_vscode" {
+  name         = "persist_vscode"
+  display_name = "Persist VS Code Settings"
+  description  = "Persist VS Code Server extensions and settings across workspaces (per-user)"
+  icon         = "/icon/code.svg"
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 10
+}
+
+data "coder_parameter" "persist_cli_config" {
+  name         = "persist_cli_config"
+  display_name = "Persist CLI Config"
+  description  = "Persist CLI tool configuration (~/.config) across workspaces (per-user)"
+  icon         = "/icon/terminal.svg"
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 11
+}
+
+data "coder_parameter" "persist_ssh" {
+  name         = "persist_ssh"
+  display_name = "Persist SSH Config"
+  description  = "Persist SSH keys and configuration across workspaces (per-user)"
+  icon         = "/icon/terminal.svg"
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 12
+}
+
+data "coder_parameter" "persist_repos" {
+  name         = "persist_repos"
+  display_name = "Persist Code Repos"
+  description  = "Persist ~/github.com and ~/dev.azure.com directories across workspaces (per-user)"
+  icon         = "/icon/github.svg"
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 13
+}
+
 locals {
   # Stack installation scripts - concatenate all selected stacks
   stack_install = join("\n", compact([
@@ -91,6 +136,9 @@ locals {
   # Base AI tools script
   base_ai_tools = file("${path.module}/scripts/base-ai-tools.sh")
 
+  # Persistent mount permissions fix script
+  fix_persistent_mount_permissions = file("${path.module}/scripts/fix-persistent-mount-permissions.sh")
+
   # Determine if we need the oh-my-claudecode install script
   include_oh_my_claudecode_script = data.coder_parameter.plugin_oh_my_claudecode.value == "true"
 
@@ -102,12 +150,52 @@ resource "docker_volume" "home_volume" {
   name = "coder-${data.coder_workspace.me.id}-home"
 }
 
+# --- Per-user persistent volumes (shared across workspaces for the same owner) ---
+resource "docker_volume" "vscode_volume" {
+  count = data.coder_parameter.persist_vscode.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-vscode"
+}
+
+resource "docker_volume" "cli_config_volume" {
+  count = data.coder_parameter.persist_cli_config.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-config"
+}
+
+resource "docker_volume" "ssh_volume" {
+  count = data.coder_parameter.persist_ssh.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-ssh"
+}
+
+resource "docker_volume" "github_volume" {
+  count = data.coder_parameter.persist_repos.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-github"
+}
+
+resource "docker_volume" "azuredevops_volume" {
+  count = data.coder_parameter.persist_repos.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-azuredevops"
+}
+
+# Oh-my-* plugin config volumes (auto-tied to plugin selection)
+resource "docker_volume" "claude_omc_volume" {
+  count = data.coder_parameter.plugin_oh_my_claudecode.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-claude-omc"
+}
+
+resource "docker_volume" "opencode_omc_volume" {
+  count = data.coder_parameter.plugin_oh_my_opencode.value == "true" ? 1 : 0
+  name  = "coder-${data.coder_workspace_owner.me.name}-opencode-omc"
+}
+
 resource "coder_agent" "main" {
   os             = "linux"
   arch           = "amd64"
   startup_script = <<-EOT
     #!/bin/bash
     set -e
+
+    # Fix ownership on per-user persistent mount volumes (runs as coder with sudo)
+    ${local.fix_persistent_mount_permissions}
 
     # Run common dependencies installation (now includes Node 24 + gh CLI)
     ${local.common_deps}
@@ -144,14 +232,6 @@ ${file("${path.module}/scripts/agents/opencode-wrapper.sh")}
 EOF
     chmod +x /home/coder/opencode-wrapper.sh
     %{endif}
-
-    # Install code-server
-    if ! command -v code-server &>/dev/null; then
-      curl -fsSL https://code-server.dev/install.sh | sh
-    fi
-
-    # Start code-server
-    code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
   EOT
 
   env = {
@@ -186,6 +266,30 @@ EOF
   }
 }
 
+resource "coder_script" "code_server" {
+  agent_id     = coder_agent.main.id
+  display_name = "code-server"
+  icon         = "/icon/code.svg"
+  run_on_start = true
+  # Use exec to replace the shell with code-server, keeping it as a child of the
+  # agent process. This ensures code-server inherits the agent's mount namespace
+  # where all Docker volume submounts are visible. Without exec, backgrounding
+  # with & orphans the process to PID 1 which has a different mount view.
+  script       = <<-EOT
+    #!/bin/bash
+    set -e
+
+    # Wait for code-server to be installed by the startup script
+    echo "Waiting for code-server installation..."
+    while ! command -v code-server >/dev/null 2>&1; do
+      sleep 5
+    done
+
+    echo "Starting code-server..."
+    exec code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder
+  EOT
+}
+
 resource "docker_container" "workspace" {
   count = data.coder_workspace.me.start_count
   image = "ubuntu:24.04"
@@ -193,7 +297,11 @@ resource "docker_container" "workspace" {
 
   hostname = data.coder_workspace.me.name
 
-  # Bootstrap coder user and run agent as coder
+  # Bootstrap container: install deps, create coder user with sudo, then run agent.
+  # Code-server is started via coder_script (run_on_start) to ensure it runs as a
+  # child of the agent where all Docker-mounted volumes are visible. Starting it
+  # earlier (in startup_script or container command) causes timing issues where
+  # nested submounts may not yet be ready.
   command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && (id -u coder >/dev/null 2>&1 || useradd -m -s /bin/bash coder) && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && sudo -u coder CODER_AGENT_TOKEN=$CODER_AGENT_TOKEN sh -c '${coder_agent.main.init_script}'"]
 
   env = [
@@ -208,6 +316,64 @@ resource "docker_container" "workspace" {
   volumes {
     container_path = "/home/coder"
     volume_name    = docker_volume.home_volume.name
+  }
+
+  # Per-user persistent mounts (conditional)
+  dynamic "volumes" {
+    for_each = data.coder_parameter.persist_vscode.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/.vscode-server"
+      volume_name    = docker_volume.vscode_volume[0].name
+    }
+  }
+
+  dynamic "volumes" {
+    for_each = data.coder_parameter.persist_cli_config.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/.config"
+      volume_name    = docker_volume.cli_config_volume[0].name
+    }
+  }
+
+  dynamic "volumes" {
+    for_each = data.coder_parameter.persist_ssh.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/.ssh"
+      volume_name    = docker_volume.ssh_volume[0].name
+    }
+  }
+
+  dynamic "volumes" {
+    for_each = data.coder_parameter.persist_repos.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/github.com"
+      volume_name    = docker_volume.github_volume[0].name
+    }
+  }
+
+  dynamic "volumes" {
+    for_each = data.coder_parameter.persist_repos.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/dev.azure.com"
+      volume_name    = docker_volume.azuredevops_volume[0].name
+    }
+  }
+
+  # Oh-my-* plugin config volumes (auto-tied to plugin selection)
+  dynamic "volumes" {
+    for_each = data.coder_parameter.plugin_oh_my_claudecode.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/.claude"
+      volume_name    = docker_volume.claude_omc_volume[0].name
+    }
+  }
+
+  dynamic "volumes" {
+    for_each = data.coder_parameter.plugin_oh_my_opencode.value == "true" ? [1] : []
+    content {
+      container_path = "/home/coder/.config/opencode"
+      volume_name    = docker_volume.opencode_omc_volume[0].name
+    }
   }
 
   network_mode = "host"
