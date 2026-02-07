@@ -271,11 +271,10 @@ resource "coder_script" "code_server" {
   display_name = "code-server"
   icon         = "/icon/code.svg"
   run_on_start = true
-  # Use exec to replace the shell with code-server, keeping it as a child of the
-  # agent process. This ensures code-server inherits the agent's mount namespace
-  # where all Docker volume submounts are visible. Without exec, backgrounding
-  # with & orphans the process to PID 1 which has a different mount view.
-  script       = <<-EOT
+  # Run code-server in the background via nohup so the startup script can complete.
+  # This allows the workspace to transition to the 'Running' state.
+  # The process is orphaned to PID 1 but retains access to all mounts in the container namespace.
+  script = <<-EOT
     #!/bin/bash
     set -e
 
@@ -285,8 +284,8 @@ resource "coder_script" "code_server" {
       sleep 5
     done
 
-    echo "Starting code-server..."
-    exec code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder
+    echo "Starting code-server in background..."
+    nohup code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/home/coder/code-server.log 2>&1 &
   EOT
 }
 
