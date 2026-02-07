@@ -146,10 +146,37 @@ locals {
   include_oh_my_opencode_wrapper = data.coder_parameter.plugin_oh_my_opencode.value == "true"
 
   user_mount_base = "/srv/docker/data/coder_data/${data.coder_workspace_owner.me.name}"
+  user_mount_paths = [
+    "${local.user_mount_base}/vscode",
+    "${local.user_mount_base}/config",
+    "${local.user_mount_base}/ssh",
+    "${local.user_mount_base}/github",
+    "${local.user_mount_base}/azuredevops",
+    "${local.user_mount_base}/claude-omc",
+    "${local.user_mount_base}/opencode-omc",
+  ]
 }
 
 resource "docker_volume" "home_volume" {
   name = "coder-${data.coder_workspace.me.id}-home"
+}
+
+resource "null_resource" "prepare_user_bind_mounts" {
+  triggers = {
+    user_mount_base = local.user_mount_base
+    user_mounts     = join(",", local.user_mount_paths)
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      mkdir -p ${local.user_mount_base}
+      for dir in ${join(" ", local.user_mount_paths)}; do
+        mkdir -p "$dir"
+      done
+      chown -R 1000:1000 ${local.user_mount_base}
+    EOT
+  }
 }
 
 resource "coder_agent" "main" {
@@ -260,6 +287,8 @@ resource "docker_container" "workspace" {
   name  = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
 
   hostname = data.coder_workspace.me.name
+
+  depends_on = [null_resource.prepare_user_bind_mounts]
 
   # Bootstrap container: install deps, create coder user with sudo, then run agent.
   # Code-server is started via coder_script (run_on_start) to ensure it runs as a
