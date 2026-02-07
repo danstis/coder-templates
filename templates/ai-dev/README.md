@@ -61,7 +61,7 @@ This template provides a complete development environment running in a Docker co
 
 - [Docker](https://docs.docker.com/get-docker/) installed and running
 - [Coder](https://coder.com/docs/v2/latest/install) server deployed
-- Sufficient disk space for Docker volumes
+- Sufficient disk space under `/srv/docker/data/coder_data` for persistent bind mounts
 
 ## Usage
 

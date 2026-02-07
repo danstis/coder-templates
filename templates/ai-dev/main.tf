@@ -144,47 +144,12 @@ locals {
 
   # Determine if we need the oh-my-opencode wrapper script
   include_oh_my_opencode_wrapper = data.coder_parameter.plugin_oh_my_opencode.value == "true"
+
+  user_mount_base = "/srv/docker/data/coder_data/${data.coder_workspace_owner.me.name}"
 }
 
 resource "docker_volume" "home_volume" {
   name = "coder-${data.coder_workspace.me.id}-home"
-}
-
-# --- Per-user persistent volumes (shared across workspaces for the same owner) ---
-resource "docker_volume" "vscode_volume" {
-  count = data.coder_parameter.persist_vscode.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-vscode"
-}
-
-resource "docker_volume" "cli_config_volume" {
-  count = data.coder_parameter.persist_cli_config.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-config"
-}
-
-resource "docker_volume" "ssh_volume" {
-  count = data.coder_parameter.persist_ssh.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-ssh"
-}
-
-resource "docker_volume" "github_volume" {
-  count = data.coder_parameter.persist_repos.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-github"
-}
-
-resource "docker_volume" "azuredevops_volume" {
-  count = data.coder_parameter.persist_repos.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-azuredevops"
-}
-
-# Oh-my-* plugin config volumes (auto-tied to plugin selection)
-resource "docker_volume" "claude_omc_volume" {
-  count = data.coder_parameter.plugin_oh_my_claudecode.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-claude-omc"
-}
-
-resource "docker_volume" "opencode_omc_volume" {
-  count = data.coder_parameter.plugin_oh_my_opencode.value == "true" ? 1 : 0
-  name  = "coder-${data.coder_workspace_owner.me.name}-opencode-omc"
 }
 
 resource "coder_agent" "main" {
@@ -322,7 +287,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.persist_vscode.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/.vscode-server"
-      volume_name    = docker_volume.vscode_volume[0].name
+      host_path      = "${local.user_mount_base}/vscode"
     }
   }
 
@@ -330,7 +295,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.persist_cli_config.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/.config"
-      volume_name    = docker_volume.cli_config_volume[0].name
+      host_path      = "${local.user_mount_base}/config"
     }
   }
 
@@ -338,7 +303,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.persist_ssh.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/.ssh"
-      volume_name    = docker_volume.ssh_volume[0].name
+      host_path      = "${local.user_mount_base}/ssh"
     }
   }
 
@@ -346,7 +311,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.persist_repos.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/github.com"
-      volume_name    = docker_volume.github_volume[0].name
+      host_path      = "${local.user_mount_base}/github"
     }
   }
 
@@ -354,7 +319,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.persist_repos.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/dev.azure.com"
-      volume_name    = docker_volume.azuredevops_volume[0].name
+      host_path      = "${local.user_mount_base}/azuredevops"
     }
   }
 
@@ -363,7 +328,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.plugin_oh_my_claudecode.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/.claude"
-      volume_name    = docker_volume.claude_omc_volume[0].name
+      host_path      = "${local.user_mount_base}/claude-omc"
     }
   }
 
@@ -371,7 +336,7 @@ resource "docker_container" "workspace" {
     for_each = data.coder_parameter.plugin_oh_my_opencode.value == "true" ? [1] : []
     content {
       container_path = "/home/coder/.config/opencode"
-      volume_name    = docker_volume.opencode_omc_volume[0].name
+      host_path      = "${local.user_mount_base}/opencode-omc"
     }
   }
 
