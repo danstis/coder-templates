@@ -232,14 +232,6 @@ ${file("${path.module}/scripts/agents/opencode-wrapper.sh")}
 EOF
     chmod +x /home/coder/opencode-wrapper.sh
     %{endif}
-
-    # Install and start code-server (as child of agent to inherit mount namespace)
-    # Starting code-server from the agent ensures its integrated terminal sees all
-    # Docker-mounted volumes including per-user persistent submounts.
-    if ! command -v code-server >/dev/null 2>&1; then
-      curl -fsSL https://code-server.dev/install.sh | sh
-    fi
-    code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
   EOT
 
   env = {
@@ -274,6 +266,25 @@ EOF
   }
 }
 
+resource "coder_script" "code_server" {
+  agent_id     = coder_agent.main.id
+  display_name = "code-server"
+  icon         = "/icon/code.svg"
+  run_on_start = true
+  script       = <<-EOT
+    #!/bin/bash
+    set -e
+
+    if ! command -v code-server >/dev/null 2>&1; then
+      echo "Installing code-server..."
+      curl -fsSL https://code-server.dev/install.sh | sh
+    fi
+
+    echo "Starting code-server..."
+    code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
+  EOT
+}
+
 resource "docker_container" "workspace" {
   count = data.coder_workspace.me.start_count
   image = "ubuntu:24.04"
@@ -282,9 +293,10 @@ resource "docker_container" "workspace" {
   hostname = data.coder_workspace.me.name
 
   # Bootstrap container: install deps, create coder user with sudo, then run agent.
-  # Code-server is started from the agent's startup_script to ensure it inherits the
-  # agent's mount namespace where all Docker-defined volumes (including nested per-user
-  # persistent submounts) are visible.
+  # Code-server is started via coder_script (run_on_start) to ensure it runs as a
+  # child of the agent where all Docker-mounted volumes are visible. Starting it
+  # earlier (in startup_script or container command) causes timing issues where
+  # nested submounts may not yet be ready.
   command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && (id -u coder >/dev/null 2>&1 || useradd -m -s /bin/bash coder) && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && sudo -u coder CODER_AGENT_TOKEN=$CODER_AGENT_TOKEN sh -c '${coder_agent.main.init_script}'"]
 
   env = [
