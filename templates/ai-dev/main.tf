@@ -233,13 +233,8 @@ EOF
     chmod +x /home/coder/opencode-wrapper.sh
     %{endif}
 
-    # Install code-server
-    if ! command -v code-server &>/dev/null; then
-      curl -fsSL https://code-server.dev/install.sh | sh
-    fi
-
-    # Start code-server
-    code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
+    # NOTE: code-server is installed and started from the container command (not here)
+    # to ensure it runs in the container's root mount namespace with full volume visibility.
   EOT
 
   env = {
@@ -281,8 +276,12 @@ resource "docker_container" "workspace" {
 
   hostname = data.coder_workspace.me.name
 
-  # Bootstrap coder user and run agent as coder
-  command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && (id -u coder >/dev/null 2>&1 || useradd -m -s /bin/bash coder) && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && sudo -u coder CODER_AGENT_TOKEN=$CODER_AGENT_TOKEN sh -c '${coder_agent.main.init_script}'"]
+  # Bootstrap coder user, start code-server in container root namespace, and run agent as coder.
+  # Code-server is installed and started here (before the agent) to ensure it runs in the
+  # container's root mount namespace where all Docker-defined volumes are visible. Starting
+  # it from the agent's startup_script may place it in a restricted mount namespace where
+  # per-user persistent sub-mounts are not visible.
+  command = ["sh", "-c", "apt-get update && apt-get install -y curl sudo && (id -u coder >/dev/null 2>&1 || useradd -m -s /bin/bash coder) && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder && chmod 440 /etc/sudoers.d/coder && (command -v code-server >/dev/null 2>&1 || curl -fsSL https://code-server.dev/install.sh | sh; sudo -u coder code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &) && sudo -u coder CODER_AGENT_TOKEN=$CODER_AGENT_TOKEN sh -c '${coder_agent.main.init_script}'"]
 
   env = [
     "CODER_AGENT_TOKEN=${coder_agent.main.token}",
