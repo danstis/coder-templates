@@ -275,10 +275,11 @@ resource "coder_script" "code_server" {
     #!/bin/bash
     set -e
 
-    if ! command -v code-server >/dev/null 2>&1; then
-      echo "Installing code-server..."
-      curl -fsSL https://code-server.dev/install.sh | sh
-    fi
+    # Wait for code-server to be installed by the startup script
+    echo "Waiting for code-server installation..."
+    while ! command -v code-server >/dev/null 2>&1; do
+      sleep 5
+    done
 
     echo "Starting code-server..."
     code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
