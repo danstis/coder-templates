@@ -271,6 +271,10 @@ resource "coder_script" "code_server" {
   display_name = "code-server"
   icon         = "/icon/code.svg"
   run_on_start = true
+  # Use exec to replace the shell with code-server, keeping it as a child of the
+  # agent process. This ensures code-server inherits the agent's mount namespace
+  # where all Docker volume submounts are visible. Without exec, backgrounding
+  # with & orphans the process to PID 1 which has a different mount view.
   script       = <<-EOT
     #!/bin/bash
     set -e
@@ -282,7 +286,7 @@ resource "coder_script" "code_server" {
     done
 
     echo "Starting code-server..."
-    code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder >/tmp/code-server.log 2>&1 &
+    exec code-server --bind-addr 0.0.0.0:13337 --auth none /home/coder
   EOT
 }
 
