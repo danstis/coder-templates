@@ -78,7 +78,7 @@ data "coder_parameter" "persist_vscode" {
   description  = "Persist VS Code Server extensions and settings across workspaces (per-user)"
   icon         = "/icon/code.svg"
   type         = "bool"
-  default      = "false"
+  default      = "true"
   mutable      = true
   order        = 10
 }
@@ -89,7 +89,7 @@ data "coder_parameter" "persist_cli_config" {
   description  = "Persist CLI tool configuration (~/.config) across workspaces (per-user)"
   icon         = "/icon/terminal.svg"
   type         = "bool"
-  default      = "false"
+  default      = "true"
   mutable      = true
   order        = 11
 }
@@ -100,7 +100,7 @@ data "coder_parameter" "persist_ssh" {
   description  = "Persist SSH keys and configuration across workspaces (per-user)"
   icon         = "/icon/terminal.svg"
   type         = "bool"
-  default      = "false"
+  default      = "true"
   mutable      = true
   order        = 12
 }
@@ -111,7 +111,7 @@ data "coder_parameter" "persist_repos" {
   description  = "Persist ~/github.com and ~/dev.azure.com directories across workspaces (per-user)"
   icon         = "/icon/github.svg"
   type         = "bool"
-  default      = "false"
+  default      = "true"
   mutable      = true
   order        = 13
 }

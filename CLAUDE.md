@@ -164,10 +164,10 @@ Per-user persistent volumes that survive workspace rebuilds and are shared acros
 
 **Toggle Parameters (order 10-13):**
 
-- **persist_vscode**: Persist VS Code Server extensions and settings at `~/.vscode-server` (default: disabled)
-- **persist_cli_config**: Persist CLI tool configuration at `~/.config` (default: disabled)
-- **persist_ssh**: Persist SSH keys and configuration at `~/.ssh` (default: disabled)
-- **persist_repos**: Persist code repositories at `~/github.com` and `~/dev.azure.com` (default: disabled)
+- **persist_vscode**: Persist VS Code Server extensions and settings at `~/.vscode-server` (default: enabled)
+- **persist_cli_config**: Persist CLI tool configuration at `~/.config` (default: enabled)
+- **persist_ssh**: Persist SSH keys and configuration at `~/.ssh` (default: enabled)
+- **persist_repos**: Persist code repositories at `~/github.com` and `~/dev.azure.com` (default: enabled)
 
 **Auto-Tied Plugin Mounts (no separate toggle):**
 
