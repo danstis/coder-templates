@@ -1,9 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json.
 {
   "name": "ai-devcontainer-base",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "image": "ghcr.io/danstis/ai-devcontainer-base:latest",
 
   // Runtime-only features (not suitable for baking into the image).
   "features": {
