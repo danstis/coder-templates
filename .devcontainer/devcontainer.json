@@ -1,0 +1,53 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+  "name": "ai-devcontainer-base",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  // Runtime-only features (not suitable for baking into the image).
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/schlich/devcontainer-features/powerlevel10k:1": {},
+    "ghcr.io/devcontainers-extra/features/markdownlint-cli2:1": {},
+    "ghcr.io/dhoeric/features/hadolint:1": {}
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config,target=/home/vscode/.config,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "streetsidesoftware.code-spell-checker",
+        "riussi.code-stats-vscode",
+        "openai.chatgpt",
+        "EditorConfig.EditorConfig",
+        "tamasfe.even-better-toml",
+        "google.geminicodeassist",
+        "mhutchie.git-graph",
+        "ryanluker.vscode-coverage-gutters",
+        "SonarSource.sonarlint-vscode",
+        "dakara.transformer",
+        "Gruntfuggly.todo-tree",
+        "redhat.vscode-xml",
+        "redhat.vscode-yaml"
+      ]
+    }
+  }
+
+  // SSH agent forwarding is handled automatically by VS Code / devcontainer CLI.
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  // "postCreateCommand": "uname -a",
+
+  // Configure tool-specific properties.
+  // "customizations": {},
+
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
+}
